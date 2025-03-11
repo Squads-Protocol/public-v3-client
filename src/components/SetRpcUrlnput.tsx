@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { useRpcUrl } from '@/hooks/useSettings'; // Now using React Query!
 
-const SetRpcUrlInput = () => {
+const SetRpcUrlInput = ({ onUpdate }: { onUpdate?: () => void }) => {
   const { rpcUrl: storedRpcUrl, setRpcUrl } = useRpcUrl(); // Use React Query
   const [rpcUrl, setRpcUrlState] = useState(storedRpcUrl || '');
 
@@ -27,6 +27,8 @@ const SetRpcUrlInput = () => {
     if (isValidUrl(rpcUrl)) {
       await setRpcUrl.mutateAsync(rpcUrl); // Use React Query mutation
       setRpcUrlState(''); // Clear input field after submission
+        if (onUpdate) onUpdate();
+
     } else {
       throw 'Please enter a valid URL.';
     }
