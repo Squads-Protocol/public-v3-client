@@ -1,12 +1,12 @@
 import RenderMultisigRoute from '@/components/RenderMultisigRoute';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { Suspense } from 'react';
+import {ErrorBoundary} from '@/components/ErrorBoundary';
+import {Suspense} from 'react';
 
 const Index = () => {
     return (
         <ErrorBoundary>
-            <Suspense>
-                <RenderMultisigRoute />
+            <Suspense fallback={<div>Loading...</div>}>
+                <RenderMultisigRoute/>
             </Suspense>
         </ErrorBoundary>
     );

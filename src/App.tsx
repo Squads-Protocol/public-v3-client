@@ -25,7 +25,7 @@ const App = () => {
             <Wallet>
                 <HashRouter>
                     <div className="flex h-screen min-w-full flex-col bg-white md:flex-row">
-                        <Suspense>
+                        <Suspense fallback={<div>Loading...</div>}>
                             <TabNav/>
                         </Suspense>
                         <div className="mt-1 space-y-2 p-3 pb-24 pt-4 md:ml-auto md:w-9/12 md:space-y-4 md:p-8 md:pt-6">
