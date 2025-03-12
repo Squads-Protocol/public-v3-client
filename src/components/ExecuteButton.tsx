@@ -20,6 +20,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import Squads, {getIxPDA, getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
+import {waitForConfirmation} from "../lib/transactionConfirmation";
 
 type ExecuteButtonProps = {
   multisigPda: string;
@@ -46,96 +47,94 @@ const ExecuteButton = ({
   const queryClient = useQueryClient();
 
   const executeTransaction = async () => {
-    try {
-      if (!wallet.publicKey) {
-        walletModal.setVisible(true);
-        return;
-      }
-      if (!wallet.signAllTransactions) return;
+    if (!wallet.publicKey) {
+      walletModal.setVisible(true);
+      return;
+    }
+    if (!wallet.signAllTransactions) return;
 
-      if (!isTransactionReady) {
-        toast.error('Proposal has not reached threshold.');
-        return;
-      }
+    if (!isTransactionReady) {
+      toast.error('Proposal has not reached threshold.');
+      return;
+    }
 
-      const member = wallet.publicKey;
+    const member = wallet.publicKey;
 
-      const squads = Squads.endpoint(rpcUrl, wallet as any, {
-        multisigProgramId: new PublicKey(programId),
-      });
+    const squads = Squads.endpoint(rpcUrl, wallet as any, {
+      multisigProgramId: new PublicKey(programId),
+    });
 
-      const [txPDA] = getTxPDA(
-        new PublicKey(multisigPda),
-        new BN(transactionIndex),
-        new PublicKey(programId)
-      );
+    const [txPDA] = getTxPDA(
+      new PublicKey(multisigPda),
+      new BN(transactionIndex),
+      new PublicKey(programId)
+    );
 
-      const executeIx = await squads.buildExecuteTransaction(txPDA);
+    const executeIx = await squads.buildExecuteTransaction(txPDA);
 
-      let transactions: VersionedTransaction[] = [];
+    let transactions: VersionedTransaction[] = [];
 
-      const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: priorityFeeLamports,
-      });
-      const computeUnitInstruction = ComputeBudgetProgram.setComputeUnitLimit({
-        units: computeUnitBudget,
-      });
+    const priorityFeeInstruction = ComputeBudgetProgram.setComputeUnitPrice({
+      microLamports: priorityFeeLamports,
+    });
+    const computeUnitInstruction = ComputeBudgetProgram.setComputeUnitLimit({
+      units: computeUnitBudget,
+    });
 
-      const blockhash = (await connection.getLatestBlockhash()).blockhash;
+    const blockhash = (await connection.getLatestBlockhash()).blockhash;
 
-      const dummyTx = new Transaction().add(executeIx);
-      dummyTx.recentBlockhash = blockhash;
-      dummyTx.feePayer = member;
+    const dummyTx = new Transaction().add(executeIx);
+    dummyTx.recentBlockhash = blockhash;
+    dummyTx.feePayer = member;
 
-      if (dummyTx.serializeMessage().length + 64 > 1050) {
-        const txState = await squads.getTransaction(txPDA);
-        transactions.push(
-          ...(await Promise.all(
-            range(txState.executedIndex + 1, txState.instructionIndex).map(async (ixIndex) => {
-              console.log(ixIndex);
-              const [ixPDA] = getIxPDA(txPDA, new BN(ixIndex), new PublicKey(programId));
-              const ixExecuteIx = await squads.buildExecuteInstruction(txPDA, ixPDA);
+    if (dummyTx.serializeMessage().length + 64 > 1050) {
+      const txState = await squads.getTransaction(txPDA);
+      transactions.push(
+        ...(await Promise.all(
+          range(txState.executedIndex + 1, txState.instructionIndex).map(async (ixIndex) => {
+            console.log(ixIndex);
+            const [ixPDA] = getIxPDA(txPDA, new BN(ixIndex), new PublicKey(programId));
+            const ixExecuteIx = await squads.buildExecuteInstruction(txPDA, ixPDA);
 
-              const message = new TransactionMessage({
-                payerKey: member,
-                recentBlockhash: blockhash,
-                instructions: [priorityFeeInstruction, computeUnitInstruction, ixExecuteIx],
-              }).compileToV0Message();
-
-              return new VersionedTransaction(message);
-            })
-          ))
-        );
-      } else {
-        transactions.push(
-          new VersionedTransaction(
-            new TransactionMessage({
-              instructions: [priorityFeeInstruction, computeUnitInstruction, executeIx],
+            const message = new TransactionMessage({
               payerKey: member,
               recentBlockhash: blockhash,
-            }).compileToV0Message()
-          )
-        );
-      }
+              instructions: [priorityFeeInstruction, computeUnitInstruction, ixExecuteIx],
+            }).compileToV0Message();
 
-      const signedTransactions = await wallet.signAllTransactions(transactions);
-
-      for (const signedTx of signedTransactions) {
-        const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-          skipPreflight: true,
-        });
-        console.log('Transaction signature', signature);
-        toast.loading('Confirming...', {
-          id: 'transaction',
-        });
-        await connection.getSignatureStatuses([signature]);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-      }
-
-      await queryClient.invalidateQueries({queryKey: ['transactions']});
-    } catch (e) {
-      console.error(e);
+            return new VersionedTransaction(message);
+          })
+        ))
+      );
+    } else {
+      transactions.push(
+        new VersionedTransaction(
+          new TransactionMessage({
+            instructions: [priorityFeeInstruction, computeUnitInstruction, executeIx],
+            payerKey: member,
+            recentBlockhash: blockhash,
+          }).compileToV0Message()
+        )
+      );
     }
+
+    const signedTransactions = await wallet.signAllTransactions(transactions);
+    const signatures = [];
+    for (const signedTx of signedTransactions) {
+      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: true,
+      });
+      console.log('Transaction signature', signature);
+      toast.loading('Confirming...', {
+        id: 'transaction',
+      });
+      signatures.push(signature);
+    }
+    const sent = await waitForConfirmation(connection, signatures);
+    if (!sent.every((sent) => !!sent)) {
+      throw `Unable to confirm some transactions`;
+    }
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
   return (
     <Dialog>
