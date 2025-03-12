@@ -7,12 +7,14 @@ import {useRpcUrl} from '@/hooks/useSettings';
 import {TransactionObject} from '@/hooks/useServices';
 import {DEFAULT_MULTISIG_PROGRAM_ID, TransactionAccount} from '@sqds/sdk';
 import CancelButton from './CancelButton';
+import {useWallet} from "@solana/wallet-adapter-react";
 
 interface ActionButtonsProps {
   multisigPda: string;
   transactionIndex: number;
   proposalStatus: string;
   programId: string;
+  transaction: TransactionObject
 }
 
 export default function TransactionTable({
@@ -55,6 +57,7 @@ export default function TransactionTable({
             <TableCell>{getStatusText(transaction.account)}</TableCell>
             <TableCell>
               <ActionButtons
+                transaction={transaction}
                 multisigPda={multisigPda!}
                 transactionIndex={Number(transaction.account.transactionIndex)}
                 proposalStatus={getStatusText(transaction.account)}
@@ -73,7 +76,15 @@ function ActionButtons({
                          transactionIndex,
                          proposalStatus,
                          programId,
+                         transaction,
                        }: ActionButtonsProps) {
+  const {publicKey} = useWallet();
+  let alreadyApproved = false;
+  let alreadyRejected = false;
+  if (publicKey) {
+    alreadyApproved = !!transaction.account.approved.find(a => a.equals(publicKey));
+    alreadyRejected = !!transaction.account.rejected.find(r => r.equals(publicKey));
+  }
   return (
     <>
       {proposalStatus === 'ExecuteReady' ? (
@@ -94,12 +105,14 @@ function ActionButtons({
       ) : (
         <>
           <ApproveButton
+            disabled={alreadyApproved}
             multisigPda={multisigPda}
             transactionIndex={transactionIndex}
             proposalStatus={proposalStatus}
             programId={programId}
           />
           <RejectButton
+            disabled={alreadyRejected}
             multisigPda={multisigPda}
             transactionIndex={transactionIndex}
             proposalStatus={proposalStatus}

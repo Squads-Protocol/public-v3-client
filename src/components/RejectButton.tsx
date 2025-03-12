@@ -14,6 +14,7 @@ type RejectButtonProps = {
   transactionIndex: number;
   proposalStatus: string;
   programId: string;
+  disabled: boolean;
 };
 
 const RejectButton = ({
@@ -21,6 +22,7 @@ const RejectButton = ({
                         transactionIndex,
                         proposalStatus,
                         programId,
+                        disabled = false
                       }: RejectButtonProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
@@ -74,7 +76,7 @@ const RejectButton = ({
 
   return (
     <Button
-      disabled={!isKindValid || !access}
+      disabled={!isKindValid || !access || disabled}
       onClick={() =>
         toast.promise(rejectTransaction, {
           id: 'transaction',

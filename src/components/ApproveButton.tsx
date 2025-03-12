@@ -11,6 +11,7 @@ import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
 
 type ApproveButtonProps = {
+  disabled: boolean;
   multisigPda: string;
   transactionIndex: number;
   proposalStatus: string;
@@ -22,6 +23,7 @@ const ApproveButton = ({
                          transactionIndex,
                          proposalStatus,
                          programId,
+                         disabled = false
                        }: ApproveButtonProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
@@ -73,7 +75,7 @@ const ApproveButton = ({
 
   return (
     <Button
-      disabled={!isKindValid || !access}
+      disabled={!isKindValid || !access || disabled}
       onClick={() =>
         toast.promise(approveProposal, {
           id: 'transaction',
