@@ -5,6 +5,9 @@ import {useWalletModal} from '@solana/wallet-adapter-react-ui';
 import {toast} from 'sonner';
 import Squads from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
+import {useMultisigData} from "../hooks/useMultisigData";
+import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {useQueryClient} from "@tanstack/react-query";
 
 type RemoveMemberButtonProps = {
   rpcUrl: string;
@@ -22,11 +25,11 @@ const RemoveMemberButton = ({
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const access = useAccess();
+  const {connection} = useMultisigData();
 
   const member = new PublicKey(memberKey);
-
-  const connection = new Connection(rpcUrl, {commitment: 'confirmed'});
-
+  const queryClient = useQueryClient();
+  
   const removeMember = async () => {
     if (!wallet.publicKey) {
       walletModal.setVisible(true);
@@ -59,8 +62,11 @@ const RemoveMemberButton = ({
     toast.loading('Confirming...', {
       id: 'transaction',
     });
-    await connection.getSignatureStatuses([signature]);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const sent = await waitForConfirmation(connection, [signature]);
+    if (!sent.every((sent) => !!sent)) {
+      throw `Unable to confirm transaction`;
+    }
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
   return (
     <Button

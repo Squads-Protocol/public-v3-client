@@ -12,6 +12,7 @@ import {useAccess} from "../lib/hooks/useAccess";
 import {waitForConfirmation} from "../lib/transactionConfirmation";
 import {useQueryClient} from "@tanstack/react-query";
 import {useMultisigData} from "../hooks/useMultisigData";
+import {useMultisig} from "../hooks/useServices";
 
 type AddMemberInputProps = {
   multisigPda: string;
@@ -26,10 +27,16 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
   const access = useAccess();
   const queryClient = useQueryClient();
   const {connection} = useMultisigData();
+  const {data: multisig} = useMultisig();
   const addMember = async () => {
     if (!wallet.publicKey) {
       walletModal.setVisible(true);
       return;
+    }
+    const newMember = new PublicKey(member);
+    const exists = !!multisig?.keys.find((key) => key.equals(newMember));
+    if (exists) {
+      throw 'Member already exists';
     }
 
     const squads = Squads.endpoint(rpcUrl, wallet as any, {
@@ -68,7 +75,7 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
     <div>
       <Input
         placeholder="Member Public Key"
-        onChange={(e) => setMember(e.target.value)}
+        onChange={(e) => setMember(e.target.value.trim())}
         className="mb-3"
       />
       <Button
