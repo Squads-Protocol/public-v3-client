@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.2...v1.0.3) (2025-03-12)
+
+
+### Bug Fixes
+
+* **transaction-cache:** updated query key ([4466a9b](https://github.com/Squads-Protocol/public-v3-client/commit/4466a9b86bd91d650c63ba1fdd36dc75eeddf760))
+
 ## [1.0.2](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.1...v1.0.2) (2025-03-12)
 
 
