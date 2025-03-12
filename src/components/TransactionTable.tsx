@@ -1,11 +1,11 @@
 import ApproveButton from './ApproveButton';
 import ExecuteButton from './ExecuteButton';
 import RejectButton from './RejectButton';
-import { TableBody, TableCell, TableRow } from './ui/table';
-import { Link } from 'react-router-dom';
-import { useRpcUrl } from '@/hooks/useSettings';
-import { TransactionObject } from '@/hooks/useServices';
-import { DEFAULT_MULTISIG_PROGRAM_ID, TransactionAccount } from '@sqds/sdk';
+import {TableBody, TableCell, TableRow} from './ui/table';
+import {Link} from 'react-router-dom';
+import {useRpcUrl} from '@/hooks/useSettings';
+import {TransactionObject} from '@/hooks/useServices';
+import {DEFAULT_MULTISIG_PROGRAM_ID, TransactionAccount} from '@sqds/sdk';
 import CancelButton from './CancelButton';
 
 interface ActionButtonsProps {
@@ -16,15 +16,15 @@ interface ActionButtonsProps {
 }
 
 export default function TransactionTable({
-  multisigPda,
-  transactions,
-  programId,
-}: {
+                                           multisigPda,
+                                           transactions,
+                                           programId,
+                                         }: {
   multisigPda: string;
   transactions: TransactionObject[];
   programId?: string;
 }) {
-  const { rpcUrl } = useRpcUrl();
+  const {rpcUrl} = useRpcUrl();
   if (transactions.length === 0) {
     return (
       <TableBody>
@@ -48,7 +48,7 @@ export default function TransactionTable({
           <TableRow key={index}>
             <TableCell>{transaction.account.transactionIndex}</TableCell>
             <TableCell className="text-blue-500">
-              <Link to={createSolanaExplorerUrl(transaction.address.toBase58(), rpcUrl!)}>
+              <Link to={createSolanaExplorerUrl(transaction.address.toBase58(), rpcUrl!)} target="_blank">
                 {transaction.address.toBase58()}
               </Link>
             </TableCell>
@@ -69,11 +69,11 @@ export default function TransactionTable({
 }
 
 function ActionButtons({
-  multisigPda,
-  transactionIndex,
-  proposalStatus,
-  programId,
-}: ActionButtonsProps) {
+                         multisigPda,
+                         transactionIndex,
+                         proposalStatus,
+                         programId,
+                       }: ActionButtonsProps) {
   return (
     <>
       {proposalStatus === 'ExecuteReady' ? (
