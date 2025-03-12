@@ -99,7 +99,7 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
 
     const sent = await waitForConfirmation(connection, [signature]);
     if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm ${sent.length} transactions`;
+      throw `Unable to confirm transaction`;
     }
     await queryClient.invalidateQueries({queryKey: ['transactions']});
     await new Promise((resolve) => setTimeout(resolve, 500));
