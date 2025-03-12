@@ -4,6 +4,7 @@ import {WalletContextState} from '@solana/wallet-adapter-react';
 import {toast} from 'sonner';
 import {loadLookupTables} from './getAccountsForSimulation';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
+import {waitForConfirmation} from "~/lib/transactionConfirmation";
 
 export const importTransaction = async (
   tx: string,
@@ -53,18 +54,10 @@ export const importTransaction = async (
     toast.loading('Confirming...', {
       id: 'transaction',
     });
-
-    let sent = false;
-    const maxAttempts = 10;
-    const delayMs = 1000;
-    for (let attempt = 0; attempt <= maxAttempts && !sent; attempt++) {
-      const status = await connection.getSignatureStatus(signature);
-      if (status?.value?.confirmationStatus === 'confirmed') {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-        sent = true;
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
+    
+    const hasSent = await waitForConfirmation(connection, [signature]);
+    if (!hasSent.every((s) => !!s)) {
+      throw `Unable to confirm transaction`;
     }
   } catch (error) {
     console.error(error);
