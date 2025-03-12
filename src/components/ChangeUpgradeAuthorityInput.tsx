@@ -1,9 +1,9 @@
 'use client';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useState } from 'react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import {Button} from './ui/button';
+import {Input} from './ui/input';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {useState} from 'react';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
 import {
   AccountMeta,
   Connection,
@@ -12,10 +12,11 @@ import {
   TransactionMessage,
   VersionedTransaction,
 } from '@solana/web3.js';
-import { toast } from 'sonner';
-import { isPublickey } from '@/lib/isPublickey';
-import { createSquadTransactionInstructions } from '@/lib/createSquadTransactionInstructions';
-import { useMultisigData } from '@/hooks/useMultisigData';
+import {toast} from 'sonner';
+import {isPublickey} from '@/lib/isPublickey';
+import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
+import {useMultisigData} from '@/hooks/useMultisigData';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type ChangeUpgradeAuthorityInputProps = {
   multisigPda: string;
@@ -24,17 +25,18 @@ type ChangeUpgradeAuthorityInputProps = {
 };
 
 const ChangeUpgradeAuthorityInput = ({
-  multisigPda,
-  rpcUrl,
-  globalProgramId,
-}: ChangeUpgradeAuthorityInputProps) => {
+                                       multisigPda,
+                                       rpcUrl,
+                                       globalProgramId,
+                                     }: ChangeUpgradeAuthorityInputProps) => {
   const [programId, setProgramId] = useState('');
   const [newAuthority, setNewAuthority] = useState('');
   const wallet = useWallet();
   const walletModal = useWalletModal();
-  const { multisigVault } = useMultisigData();
+  const {multisigVault} = useMultisigData();
+  const access = useAccess();
 
-  const connection = new Connection(rpcUrl, { commitment: 'confirmed' });
+  const connection = new Connection(rpcUrl, {commitment: 'confirmed'});
 
   const changeUpgradeAuth = async () => {
     if (!wallet.publicKey) {
@@ -124,7 +126,7 @@ const ChangeUpgradeAuthorityInput = ({
             error: (e) => `Failed to propose: ${e}`,
           })
         }
-        disabled={!isPublickey(programId) || !isPublickey(newAuthority)}
+        disabled={!isPublickey(programId) || !isPublickey(newAuthority) || !access}
       >
         Change Authority
       </Button>

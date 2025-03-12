@@ -1,13 +1,14 @@
 'use client';
-import { PublicKey, Transaction } from '@solana/web3.js';
-import { Button } from './ui/button';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { toast } from 'sonner';
-import { useMultisigData } from '@/hooks/useMultisigData';
-import { useQueryClient } from '@tanstack/react-query';
-import Squads, { getTxPDA } from '@sqds/sdk';
+import {PublicKey, Transaction} from '@solana/web3.js';
+import {Button} from './ui/button';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {toast} from 'sonner';
+import {useMultisigData} from '@/hooks/useMultisigData';
+import {useQueryClient} from '@tanstack/react-query';
+import Squads, {getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type ApproveButtonProps = {
   multisigPda: string;
@@ -17,17 +18,18 @@ type ApproveButtonProps = {
 };
 
 const ApproveButton = ({
-  multisigPda,
-  transactionIndex,
-  proposalStatus,
-  programId,
-}: ApproveButtonProps) => {
+                         multisigPda,
+                         transactionIndex,
+                         proposalStatus,
+                         programId,
+                       }: ApproveButtonProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const validKinds = ['Active', 'Draft'];
   const isKindValid = validKinds.includes(proposalStatus);
-  const { connection, rpcUrl } = useMultisigData();
+  const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
+  const access = useAccess();
 
   const approveProposal = async () => {
     if (!wallet.publicKey) {
@@ -66,12 +68,12 @@ const ApproveButton = ({
     });
     await connection.getSignatureStatuses([signature]);
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
   return (
     <Button
-      disabled={!isKindValid}
+      disabled={!isKindValid || !access}
       onClick={() =>
         toast.promise(approveProposal, {
           id: 'transaction',

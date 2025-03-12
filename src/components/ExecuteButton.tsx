@@ -5,20 +5,21 @@ import {
   TransactionMessage,
   VersionedTransaction,
 } from '@solana/web3.js';
-import { Button } from './ui/button';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { toast } from 'sonner';
-import { Dialog, DialogDescription, DialogHeader } from './ui/dialog';
-import { DialogTrigger } from './ui/dialog';
-import { DialogContent, DialogTitle } from './ui/dialog';
-import { useState } from 'react';
-import { Input } from './ui/input';
-import { range } from '@/lib/utils';
-import { useMultisigData } from '@/hooks/useMultisigData';
-import { useQueryClient } from '@tanstack/react-query';
-import Squads, { getIxPDA, getTxPDA } from '@sqds/sdk';
+import {Button} from './ui/button';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {toast} from 'sonner';
+import {Dialog, DialogDescription, DialogHeader} from './ui/dialog';
+import {DialogTrigger} from './ui/dialog';
+import {DialogContent, DialogTitle} from './ui/dialog';
+import {useState} from 'react';
+import {Input} from './ui/input';
+import {range} from '@/lib/utils';
+import {useMultisigData} from '@/hooks/useMultisigData';
+import {useQueryClient} from '@tanstack/react-query';
+import Squads, {getIxPDA, getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type ExecuteButtonProps = {
   multisigPda: string;
@@ -28,19 +29,20 @@ type ExecuteButtonProps = {
 };
 
 const ExecuteButton = ({
-  multisigPda,
-  transactionIndex,
-  proposalStatus,
-  programId,
-}: ExecuteButtonProps) => {
+                         multisigPda,
+                         transactionIndex,
+                         proposalStatus,
+                         programId,
+                       }: ExecuteButtonProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const [priorityFeeLamports, setPriorityFeeLamports] = useState<number>(5000);
   const [computeUnitBudget, setComputeUnitBudget] = useState<number>(200_000);
+  const access = useAccess();
 
   const isTransactionReady = proposalStatus === 'ExecuteReady';
 
-  const { connection, rpcUrl } = useMultisigData();
+  const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
 
   const executeTransaction = async () => {
@@ -130,7 +132,7 @@ const ExecuteButton = ({
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({queryKey: ['transactions']});
     } catch (e) {
       console.error(e);
     }
@@ -164,7 +166,7 @@ const ExecuteButton = ({
           value={computeUnitBudget}
         />
         <Button
-          disabled={!isTransactionReady}
+          disabled={!isTransactionReady || !access}
           onClick={() =>
             toast.promise(executeTransaction, {
               id: 'transaction',

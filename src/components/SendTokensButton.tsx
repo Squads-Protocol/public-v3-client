@@ -6,22 +6,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from './ui/button';
-import { useState } from 'react';
+import {Button} from './ui/button';
+import {useState} from 'react';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
 } from '@solana/spl-token';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { Input } from './ui/input';
-import { toast } from 'sonner';
-import { isPublickey } from '@/lib/isPublickey';
-import { useMultisigData } from '@/hooks/useMultisigData';
-import { useQueryClient } from '@tanstack/react-query';
-import { createSquadTransactionInstructions } from '@/lib/createSquadTransactionInstructions';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {PublicKey, TransactionMessage, VersionedTransaction} from '@solana/web3.js';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {Input} from './ui/input';
+import {toast} from 'sonner';
+import {isPublickey} from '@/lib/isPublickey';
+import {useMultisigData} from '@/hooks/useMultisigData';
+import {useQueryClient} from '@tanstack/react-query';
+import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type SendTokensProps = {
   tokenAccount: string;
@@ -30,13 +31,14 @@ type SendTokensProps = {
   multisigPda: string;
 };
 
-const SendTokens = ({ tokenAccount, mint, decimals, multisigPda }: SendTokensProps) => {
+const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const [amount, setAmount] = useState<string>('');
   const [recipient, setRecipient] = useState('');
+  const access = useAccess();
 
-  const { connection, multisigVault, rpcUrl, programId } = useMultisigData();
+  const {connection, multisigVault, rpcUrl, programId} = useMultisigData();
 
   const queryClient = useQueryClient();
   const parsedAmount = parseFloat(amount);
@@ -95,13 +97,14 @@ const SendTokens = ({ tokenAccount, mint, decimals, multisigPda }: SendTokensPro
     });
     await connection.getSignatureStatuses([signature]);
     await new Promise((resolve) => setTimeout(resolve, 5000));
-    await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button
+          disabled={!access}
           onClick={(e) => {
             if (!wallet.publicKey) {
               e.preventDefault();
@@ -120,9 +123,9 @@ const SendTokens = ({ tokenAccount, mint, decimals, multisigPda }: SendTokensPro
             Create a proposal to transfer tokens to another address.
           </DialogDescription>
         </DialogHeader>
-        <Input placeholder="Recipient" type="text" onChange={(e) => setRecipient(e.target.value)} />
+        <Input placeholder="Recipient" type="text" onChange={(e) => setRecipient(e.target.value)}/>
         {isPublickey(recipient) ? null : <p className="text-xs">Invalid recipient address</p>}
-        <Input placeholder="Amount" type="number" onChange={(e) => setAmount(e.target.value)} />
+        <Input placeholder="Amount" type="number" onChange={(e) => setAmount(e.target.value)}/>
         {!isAmountValid && amount.length > 0 && (
           <p className="text-xs text-red-500">Invalid amount</p>
         )}
@@ -135,7 +138,7 @@ const SendTokens = ({ tokenAccount, mint, decimals, multisigPda }: SendTokensPro
               error: (e) => `Failed to propose: ${e}`,
             })
           }
-          disabled={!isPublickey(recipient)}
+          disabled={!isPublickey(recipient) || !access}
         >
           Transfer
         </Button>

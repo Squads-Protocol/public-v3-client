@@ -1,11 +1,12 @@
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useState } from 'react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { Connection, PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
-import { toast } from 'sonner';
+import {Button} from './ui/button';
+import {Input} from './ui/input';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {useState} from 'react';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {Connection, PublicKey, TransactionMessage, VersionedTransaction} from '@solana/web3.js';
+import {toast} from 'sonner';
 import Squads from '@sqds/sdk';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type ChangeThresholdInputProps = {
   multisigPda: string;
@@ -13,12 +14,13 @@ type ChangeThresholdInputProps = {
   programId: string;
 };
 
-const ChangeThresholdInput = ({ multisigPda, rpcUrl, programId }: ChangeThresholdInputProps) => {
+const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdInputProps) => {
   const [threshold, setThreshold] = useState('');
   const wallet = useWallet();
   const walletModal = useWalletModal();
+  const access = useAccess();
 
-  const connection = new Connection(rpcUrl, { commitment: 'confirmed' });
+  const connection = new Connection(rpcUrl, {commitment: 'confirmed'});
 
   const changeThreshold = async () => {
     if (!wallet.publicKey) {
@@ -72,7 +74,7 @@ const ChangeThresholdInput = ({ multisigPda, rpcUrl, programId }: ChangeThreshol
             error: (e) => `Failed to propose: ${e}`,
           })
         }
-        disabled={!threshold}
+        disabled={!threshold || !access}
       >
         Change Threshold
       </Button>

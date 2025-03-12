@@ -1,9 +1,10 @@
-import { Connection, PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
-import { Button } from './ui/button';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { toast } from 'sonner';
+import {Connection, PublicKey, TransactionMessage, VersionedTransaction} from '@solana/web3.js';
+import {Button} from './ui/button';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {toast} from 'sonner';
 import Squads from '@sqds/sdk';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type RemoveMemberButtonProps = {
   rpcUrl: string;
@@ -13,17 +14,18 @@ type RemoveMemberButtonProps = {
 };
 
 const RemoveMemberButton = ({
-  rpcUrl,
-  multisigPda,
-  memberKey,
-  programId,
-}: RemoveMemberButtonProps) => {
+                              rpcUrl,
+                              multisigPda,
+                              memberKey,
+                              programId,
+                            }: RemoveMemberButtonProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
+  const access = useAccess();
 
   const member = new PublicKey(memberKey);
 
-  const connection = new Connection(rpcUrl, { commitment: 'confirmed' });
+  const connection = new Connection(rpcUrl, {commitment: 'confirmed'});
 
   const removeMember = async () => {
     if (!wallet.publicKey) {
@@ -62,7 +64,7 @@ const RemoveMemberButton = ({
   };
   return (
     <Button
-      disabled={false}
+      disabled={!access}
       onClick={() =>
         toast.promise(removeMember, {
           id: 'transaction',

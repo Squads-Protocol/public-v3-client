@@ -1,13 +1,14 @@
 'use client';
-import { PublicKey, Transaction } from '@solana/web3.js';
-import { Button } from './ui/button';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { toast } from 'sonner';
-import { useMultisigData } from '@/hooks/useMultisigData';
-import { useQueryClient } from '@tanstack/react-query';
+import {PublicKey, Transaction} from '@solana/web3.js';
+import {Button} from './ui/button';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {toast} from 'sonner';
+import {useMultisigData} from '@/hooks/useMultisigData';
+import {useQueryClient} from '@tanstack/react-query';
 import BN from 'bn.js';
-import Squads, { getTxPDA } from '@sqds/sdk';
+import Squads, {getTxPDA} from '@sqds/sdk';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type CancelButtonProps = {
   multisigPda: string;
@@ -17,17 +18,18 @@ type CancelButtonProps = {
 };
 
 const CancelButton = ({
-  multisigPda,
-  transactionIndex,
-  proposalStatus,
-  programId,
-}: CancelButtonProps) => {
+                        multisigPda,
+                        transactionIndex,
+                        proposalStatus,
+                        programId,
+                      }: CancelButtonProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
+  const access = useAccess();
 
   const isTransactionReady = proposalStatus === 'ExecuteReady';
 
-  const { connection, rpcUrl } = useMultisigData();
+  const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
 
   const cancelTransaction = async () => {
@@ -66,12 +68,12 @@ const CancelButton = ({
     });
     await connection.getSignatureStatuses([signature]);
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
   return (
     <Button
-      disabled={!isTransactionReady}
+      disabled={!isTransactionReady || !access}
       onClick={() =>
         toast.promise(cancelTransaction, {
           id: 'transaction',

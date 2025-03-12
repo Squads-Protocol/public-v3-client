@@ -1,12 +1,13 @@
-import { PublicKey, Transaction } from '@solana/web3.js';
-import { Button } from './ui/button';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { toast } from 'sonner';
-import { useMultisigData } from '@/hooks/useMultisigData';
-import { useQueryClient } from '@tanstack/react-query';
-import Squads, { getTxPDA } from '@sqds/sdk';
+import {PublicKey, Transaction} from '@solana/web3.js';
+import {Button} from './ui/button';
+import {useWallet} from '@solana/wallet-adapter-react';
+import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {toast} from 'sonner';
+import {useMultisigData} from '@/hooks/useMultisigData';
+import {useQueryClient} from '@tanstack/react-query';
+import Squads, {getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
+import {useAccess} from "../lib/hooks/useAccess";
 
 type RejectButtonProps = {
   multisigPda: string;
@@ -16,15 +17,16 @@ type RejectButtonProps = {
 };
 
 const RejectButton = ({
-  multisigPda,
-  transactionIndex,
-  proposalStatus,
-  programId,
-}: RejectButtonProps) => {
+                        multisigPda,
+                        transactionIndex,
+                        proposalStatus,
+                        programId,
+                      }: RejectButtonProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
+  const access = useAccess();
 
-  const { connection, rpcUrl } = useMultisigData();
+  const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
 
   const validKinds = ['Rejected', 'Draft'];
@@ -67,12 +69,12 @@ const RejectButton = ({
     });
     await connection.getSignatureStatuses([signature]);
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
   return (
     <Button
-      disabled={!isKindValid}
+      disabled={!isKindValid || !access}
       onClick={() =>
         toast.promise(rejectTransaction, {
           id: 'transaction',
