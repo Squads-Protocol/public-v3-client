@@ -38,7 +38,8 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
   const [amount, setAmount] = useState<string>('');
   const [recipient, setRecipient] = useState('');
   const access = useAccess();
-
+  const [isOpen, setIsOpen] = useState(false);
+  const closeDialog = () => setIsOpen(false);
   const {connection, multisigVault, rpcUrl, programId} = useMultisigData();
 
   const queryClient = useQueryClient();
@@ -103,10 +104,13 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
     }
     await queryClient.invalidateQueries({queryKey: ['transactions']});
     await new Promise((resolve) => setTimeout(resolve, 500));
+    setAmount('');
+    setRecipient('');
+    closeDialog();
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           disabled={!access}

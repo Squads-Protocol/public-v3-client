@@ -40,7 +40,8 @@ const SendSol = ({multisigPda}: SendSolProps) => {
   const parsedAmount = parseFloat(amount);
   const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
   const access = useAccess();
-
+  const [isOpen, setIsOpen] = useState(false);
+  const closeDialog = () => setIsOpen(false);
   const transfer = async () => {
     if (!wallet.publicKey || !multisigVault) {
       return;
@@ -82,10 +83,13 @@ const SendSol = ({multisigPda}: SendSolProps) => {
       throw `Unable to confirm transaction`;
     }
     await queryClient.invalidateQueries({queryKey: ['transactions']}, {});
+    setAmount('');
+    setRecipient('');
+    closeDialog();
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           disabled={!access}
