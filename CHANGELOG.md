@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.2](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.1...v1.0.2) (2025-03-12)
+
+
+### Bug Fixes
+
+* **add/remove:** correct conf false positives ([60b06ae](https://github.com/Squads-Protocol/public-v3-client/commit/60b06ae0f401153975c49d30c70e56300f08933e))
+* **confirmations:** more confirmation logic improvements ([a170190](https://github.com/Squads-Protocol/public-v3-client/commit/a1701904221c9a420267df2f87df3bf682367bfb))
+* **existing-votes:** disable buttons if relevant vote has been cast ([d571c05](https://github.com/Squads-Protocol/public-v3-client/commit/d571c053af08b177197c1b8d6e6d679cfdc3bd5f))
+* **false-positive:** fix for approve and cancel ([0d9b7c2](https://github.com/Squads-Protocol/public-v3-client/commit/0d9b7c25ddd6572196f83dffcf5c7445dfca56fb))
+* **modals:** close modal ([a090c70](https://github.com/Squads-Protocol/public-v3-client/commit/a090c709e60604c4987594566fd0bbc2aeaf10ea))
+* **reject:** false positive fix on rejection ([c4cc20f](https://github.com/Squads-Protocol/public-v3-client/commit/c4cc20ff5bdda0dc872e4e6cb9da516ecae76629))
+* **reject:** proper type for reject ([50a0f3f](https://github.com/Squads-Protocol/public-v3-client/commit/50a0f3ffa439de46579fa7520c3d1c439c9624e8))
+* **tx-import:** improved confirmation logic ([bfe8f98](https://github.com/Squads-Protocol/public-v3-client/commit/bfe8f98f302f6eda707e939b59366b2ffd7c53a5))
+
 ## [1.0.1](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.0...v1.0.1) (2025-03-12)
 
 
