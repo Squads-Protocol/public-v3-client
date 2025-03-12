@@ -132,14 +132,15 @@ const ExecuteButton = ({
     }
     const sent = await waitForConfirmation(connection, signatures);
     if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm some transactions`;
+      throw `Unable to confirm ${sent.length} transactions`;
     }
     await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await new Promise((resolve) => setTimeout(resolve, 500));
   };
   return (
     <Dialog>
       <DialogTrigger
-        disabled={!isTransactionReady}
+        disabled={!isTransactionReady || !access}
         className={`mr-2 h-10 px-4 py-2 ${!isTransactionReady ? `bg-primary/50` : `bg-primary hover:bg-primary/90 `} text-primary-foreground  rounded-md`}
       >
         Execute

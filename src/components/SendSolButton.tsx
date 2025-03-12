@@ -24,6 +24,7 @@ import {useMultisigData} from '@/hooks/useMultisigData';
 import {useQueryClient} from '@tanstack/react-query';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
 import {useAccess} from "../lib/hooks/useAccess";
+import {waitForConfirmation} from "../lib/transactionConfirmation";
 
 type SendSolProps = {
   multisigPda: string;
@@ -76,9 +77,12 @@ const SendSol = ({multisigPda}: SendSolProps) => {
     toast.loading('Confirming...', {
       id: 'transaction',
     });
-    await connection.getSignatureStatuses([signature]);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const sent = await waitForConfirmation(connection, [signature]);
+    if (!sent.every((sent) => !!sent)) {
+      throw `Unable to confirm ${sent.length} transactions`;
+    }
     await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
   return (

@@ -14,10 +14,11 @@ export async function waitForConfirmation(
       while (Date.now() - startTime < timeoutMs) {
         const response: RpcResponseAndContext<(SignatureStatus | null)[]> =
           await connection.getSignatureStatuses(signatures);
+        console.log(response);
         latestStatuses = response.value; // Store latest response
 
         // Check if the signatures are confirmed
-        if (latestStatuses.every((status) => status?.confirmationStatus === 'confirmed')) {
+        if (latestStatuses.every((status) => (!status?.err && status?.confirmationStatus === 'confirmed'))) {
           return resolve(latestStatuses);
         }
 
