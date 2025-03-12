@@ -82,7 +82,7 @@ const SendSol = ({multisigPda}: SendSolProps) => {
     if (!sent.every((sent) => !!sent)) {
       throw `Unable to confirm transaction`;
     }
-    await queryClient.invalidateQueries({queryKey: ['transactions']}, {});
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
     setAmount('');
     setRecipient('');
     closeDialog();

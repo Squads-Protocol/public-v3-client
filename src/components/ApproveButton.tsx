@@ -9,6 +9,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import Squads, {getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
+import {waitForConfirmation} from "../lib/transactionConfirmation";
 
 type ApproveButtonProps = {
   disabled: boolean;
@@ -68,8 +69,10 @@ const ApproveButton = ({
     toast.loading('Confirming...', {
       id: 'transaction',
     });
-    await connection.getSignatureStatuses([signature]);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const sent = await waitForConfirmation(connection, [signature]);
+    if (!sent.every((sent) => !!sent)) {
+      throw `Unable to confirm transaction`;
+    }
     await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
