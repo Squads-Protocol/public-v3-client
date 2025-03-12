@@ -7,6 +7,9 @@ import {Connection, PublicKey, TransactionMessage, VersionedTransaction} from '@
 import {toast} from 'sonner';
 import Squads from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
+import {useMultisigData} from "../hooks/useMultisigData";
+import {useMultisig} from "../hooks/useServices";
+import invariant from "invariant";
 
 type ChangeThresholdInputProps = {
   multisigPda: string;
@@ -20,14 +23,18 @@ const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdI
   const walletModal = useWalletModal();
   const access = useAccess();
 
-  const connection = new Connection(rpcUrl, {commitment: 'confirmed'});
-
+  const {connection} = useMultisigData();
+  const {data: multisig} = useMultisig();
   const changeThreshold = async () => {
+    invariant(multisig, 'Multisig not found');
     if (!wallet.publicKey) {
       walletModal.setVisible(true);
       return;
     }
-
+    const thresholdNum = Number(threshold);
+    if (thresholdNum > multisig.keys.length || thresholdNum < 1) {
+      throw 'Invalid threshold'
+    }
     const squads = Squads.endpoint(rpcUrl, wallet as any, {
       multisigProgramId: new PublicKey(programId),
     });
@@ -60,7 +67,7 @@ const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdI
   return (
     <div>
       <Input
-        placeholder="Thresold Number"
+        placeholder={multisig ? multisig.threshold.toString() : ''}
         type="text"
         onChange={(e) => setThreshold(e.target.value)}
         className="mb-3"
