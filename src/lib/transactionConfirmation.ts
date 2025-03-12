@@ -3,13 +3,13 @@ import {Connection, RpcResponseAndContext, SignatureStatus} from '@solana/web3.j
 export async function waitForConfirmation(
   connection: Connection, // Adjust type based on your connection object
   signatures: string[],
-  timeoutMs: number = 5000,
+  timeoutMs: number = 10000,
   sigCheckWait: number = 500
 ): Promise<(null | SignatureStatus)[]> {
   const startTime = Date.now();
   let latestStatuses: (null | SignatureStatus)[] = [];
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const checkStatus = async () => {
       while (Date.now() - startTime < timeoutMs) {
         const response: RpcResponseAndContext<(SignatureStatus | null)[]> =
@@ -18,7 +18,7 @@ export async function waitForConfirmation(
         latestStatuses = response.value; // Store latest response
 
         // Check if the signatures are confirmed
-        if (latestStatuses.every((status) => (!status?.err && status?.confirmationStatus === 'confirmed'))) {
+        if (latestStatuses.every((status) => ((!status?.err || Object.keys(status?.err).length === 0) && status?.confirmationStatus === 'confirmed'))) {
           return resolve(latestStatuses);
         }
 
@@ -31,7 +31,7 @@ export async function waitForConfirmation(
 
     Promise.race([
       checkStatus(),
-      new Promise<void>((r) => setTimeout(r, timeoutMs)).then(() => resolve(latestStatuses)), // Ensure latestStatuses is returned
+      new Promise<void>((r) => setTimeout(r, timeoutMs)).then(() => reject(latestStatuses)), // Ensure latestStatuses is returned
     ]);
   });
 }
