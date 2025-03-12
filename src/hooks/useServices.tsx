@@ -1,10 +1,10 @@
 'use client';
 
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { PublicKey } from '@solana/web3.js';
-import { useMultisigData } from '@/hooks/useMultisigData';
-import Squads, { getTxPDA, TransactionAccount } from '@sqds/sdk';
-import { useWallet } from '@solana/wallet-adapter-react';
+import {useSuspenseQuery} from '@tanstack/react-query';
+import {PublicKey} from '@solana/web3.js';
+import {useMultisigData} from '@/hooks/useMultisigData';
+import Squads, {getTxPDA, TransactionAccount} from '@sqds/sdk';
+import {useWallet} from '@solana/wallet-adapter-react';
 import BN from 'bn.js';
 
 export interface TransactionObject {
@@ -14,7 +14,7 @@ export interface TransactionObject {
 
 // load multisig
 export const useMultisig = () => {
-  const { rpcUrl, programId, multisigAddress } = useMultisigData();
+  const {rpcUrl, programId, multisigAddress} = useMultisigData();
   const wallet = useWallet();
 
   return useSuspenseQuery({
@@ -24,7 +24,7 @@ export const useMultisig = () => {
       try {
         const multisigPubkey = new PublicKey(multisigAddress);
 
-        const squads = Squads.endpoint(rpcUrl, wallet as any, { multisigProgramId: programId });
+        const squads = Squads.endpoint(rpcUrl, wallet as any, {multisigProgramId: programId});
 
         return squads.getMultisig(multisigPubkey);
       } catch (error) {
@@ -36,7 +36,7 @@ export const useMultisig = () => {
 };
 
 export const useBalance = () => {
-  const { connection, multisigVault } = useMultisigData();
+  const {connection, multisigVault} = useMultisigData();
 
   return useSuspenseQuery({
     queryKey: ['balance', multisigVault?.toBase58()],
@@ -53,7 +53,7 @@ export const useBalance = () => {
 };
 
 export const useGetTokens = () => {
-  const { connection, multisigVault } = useMultisigData();
+  const {connection, multisigVault} = useMultisigData();
 
   return useSuspenseQuery({
     queryKey: ['tokenBalances', multisigVault?.toBase58()],
@@ -87,11 +87,11 @@ async function fetchTransactionData(
     return null;
   }
 
-  return { account: transaction, address: transactionPda };
+  return {account: transaction, address: transactionPda};
 }
 
 export const useTransactions = (startIndex: number, endIndex: number) => {
-  const { programId, multisigAddress, rpcUrl } = useMultisigData();
+  const {programId, multisigAddress, rpcUrl} = useMultisigData();
   const wallet = useWallet();
 
   return useSuspenseQuery({
@@ -102,12 +102,16 @@ export const useTransactions = (startIndex: number, endIndex: number) => {
         const multisigPda = new PublicKey(multisigAddress);
         const results: TransactionObject[] = [];
 
-        const squads = Squads.endpoint(rpcUrl, wallet as any, { multisigProgramId: programId });
+        const squads = Squads.endpoint(rpcUrl, wallet as any, {multisigProgramId: programId});
 
         for (let i = 0; i <= startIndex - endIndex; i++) {
           const index = BigInt(startIndex - i);
           const transaction = await fetchTransactionData(squads, multisigPda, index, programId);
-          if (transaction) results.push(transaction);
+          if (transaction) {
+            results.push(transaction);
+          }
+          // wait to prevent rate limits
+          await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
         return results;
