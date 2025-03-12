@@ -10,6 +10,8 @@ import {useAccess} from "../lib/hooks/useAccess";
 import {useMultisigData} from "../hooks/useMultisigData";
 import {useMultisig} from "../hooks/useServices";
 import invariant from "invariant";
+import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {useQueryClient} from "@tanstack/react-query";
 
 type ChangeThresholdInputProps = {
   multisigPda: string;
@@ -24,6 +26,7 @@ const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdI
   const access = useAccess();
 
   const {connection} = useMultisigData();
+  const queryClient = useQueryClient();
   const {data: multisig} = useMultisig();
   const changeThreshold = async () => {
     invariant(multisig, 'Multisig not found');
@@ -61,8 +64,12 @@ const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdI
     toast.loading('Confirming...', {
       id: 'transaction',
     });
-    await connection.getSignatureStatuses([signature]);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const sent = await waitForConfirmation(connection, [signature]);
+    if (!sent.every((sent) => !!sent)) {
+      throw `Unable to confirm transaction`;
+    }
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
+
   };
   return (
     <div>

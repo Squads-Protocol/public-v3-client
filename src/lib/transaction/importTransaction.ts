@@ -1,9 +1,9 @@
-import { Connection, PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
-import { decodeAndDeserialize } from './decodeAndDeserialize';
-import { WalletContextState } from '@solana/wallet-adapter-react';
-import { toast } from 'sonner';
-import { loadLookupTables } from './getAccountsForSimulation';
-import { createSquadTransactionInstructions } from '@/lib/createSquadTransactionInstructions';
+import {Connection, PublicKey, TransactionMessage, VersionedTransaction} from '@solana/web3.js';
+import {decodeAndDeserialize} from './decodeAndDeserialize';
+import {WalletContextState} from '@solana/wallet-adapter-react';
+import {toast} from 'sonner';
+import {loadLookupTables} from './getAccountsForSimulation';
+import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
 
 export const importTransaction = async (
   tx: string,
@@ -16,7 +16,7 @@ export const importTransaction = async (
     throw 'Please connect your wallet.';
   }
   try {
-    const { message, version } = decodeAndDeserialize(tx);
+    const {message, version} = decodeAndDeserialize(tx);
 
     const addressLookupTableAccounts =
       version === 0 ? await loadLookupTables(connection, message.compileToV0Message()) : [];
@@ -68,5 +68,6 @@ export const importTransaction = async (
     }
   } catch (error) {
     console.error(error);
+    throw error;
   }
 };

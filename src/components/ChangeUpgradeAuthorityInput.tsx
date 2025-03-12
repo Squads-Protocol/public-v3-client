@@ -17,6 +17,8 @@ import {isPublickey} from '@/lib/isPublickey';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
 import {useMultisigData} from '@/hooks/useMultisigData';
 import {useAccess} from "../lib/hooks/useAccess";
+import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {useQueryClient} from "@tanstack/react-query";
 
 type ChangeUpgradeAuthorityInputProps = {
   multisigPda: string;
@@ -33,10 +35,9 @@ const ChangeUpgradeAuthorityInput = ({
   const [newAuthority, setNewAuthority] = useState('');
   const wallet = useWallet();
   const walletModal = useWalletModal();
-  const {multisigVault} = useMultisigData();
+  const {multisigVault, connection} = useMultisigData();
   const access = useAccess();
-
-  const connection = new Connection(rpcUrl, {commitment: 'confirmed'});
+  const queryClient = useQueryClient();
 
   const changeUpgradeAuth = async () => {
     if (!wallet.publicKey) {
@@ -100,8 +101,12 @@ const ChangeUpgradeAuthorityInput = ({
     toast.loading('Confirming...', {
       id: 'transaction',
     });
-    await connection.getSignatureStatuses([signature]);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const sent = await waitForConfirmation(connection, [signature]);
+    if (!sent.every((sent) => !!sent)) {
+      throw `Unable to confirm transaction`;
+    }
+    await queryClient.invalidateQueries({queryKey: ['transactions']});
+
   };
   return (
     <div>
