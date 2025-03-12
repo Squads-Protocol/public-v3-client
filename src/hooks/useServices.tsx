@@ -95,7 +95,7 @@ export const useTransactions = (startIndex: number, endIndex: number) => {
   const wallet = useWallet();
 
   return useSuspenseQuery({
-    queryKey: ['transactions', startIndex, endIndex, multisigAddress, programId.toBase58()],
+    queryKey: ['transactions', {startIndex, endIndex, multisigAddress, programId: programId.toBase58()}],
     queryFn: async () => {
       if (!multisigAddress) return null;
       try {
