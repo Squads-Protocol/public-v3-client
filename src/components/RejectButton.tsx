@@ -29,7 +29,7 @@ const RejectButton = ({
   const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
 
-  const validKinds = ['Rejected', 'Draft'];
+  const validKinds = ['Active'];
   const isKindValid = validKinds.includes(proposalStatus);
 
   const rejectTransaction = async () => {
