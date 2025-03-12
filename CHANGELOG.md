@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.3...v1.0.4) (2025-03-12)
+
+
+### Bug Fixes
+
+* **nav:** mobile alignment and gh repo ([bae272c](https://github.com/Squads-Protocol/public-v3-client/commit/bae272c4414344edaf7881ac54fa88afe100c17c))
+
 ## [1.0.3](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.2...v1.0.3) (2025-03-12)
 
 
