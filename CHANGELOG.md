@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.4...v1.1.0) (2025-03-13)
+
+
+### Features
+
+* **main:** Add program manager tab ([#6](https://github.com/Squads-Protocol/public-v3-client/issues/6)) ([89f2f8e](https://github.com/Squads-Protocol/public-v3-client/commit/89f2f8e25d16a7535a22c26cfa2a8a5bcbe76afb))
+
 ## [1.0.4](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.3...v1.0.4) (2025-03-12)
 
 
