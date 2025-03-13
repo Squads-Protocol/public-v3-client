@@ -6,7 +6,6 @@ import {useState} from 'react';
 import {useWalletModal} from '@solana/wallet-adapter-react-ui';
 import {
   AccountMeta,
-  Connection,
   PublicKey,
   TransactionInstruction,
   TransactionMessage,
@@ -19,23 +18,19 @@ import {useMultisigData} from '@/hooks/useMultisigData';
 import {useAccess} from "../lib/hooks/useAccess";
 import {waitForConfirmation} from "../lib/transactionConfirmation";
 import {useQueryClient} from "@tanstack/react-query";
+import {SimplifiedProgramInfo} from "../hooks/useProgram";
 
 type ChangeUpgradeAuthorityInputProps = {
-  multisigPda: string;
-  rpcUrl: string;
-  globalProgramId: string;
+  programInfos: SimplifiedProgramInfo;
 };
 
 const ChangeUpgradeAuthorityInput = ({
-                                       multisigPda,
-                                       rpcUrl,
-                                       globalProgramId,
+                                       programInfos
                                      }: ChangeUpgradeAuthorityInputProps) => {
-  const [programId, setProgramId] = useState('');
   const [newAuthority, setNewAuthority] = useState('');
   const wallet = useWallet();
   const walletModal = useWalletModal();
-  const {multisigVault, connection} = useMultisigData();
+  const {multisigVault, connection, multisigAddress, rpcUrl, programId} = useMultisigData();
   const access = useAccess();
   const queryClient = useQueryClient();
 
@@ -45,18 +40,19 @@ const ChangeUpgradeAuthorityInput = ({
       return;
     }
 
-    if (!multisigVault) return;
+    if (!multisigVault) {
+      throw 'Multisig vault not found';
+    }
+    if (!multisigAddress) {
+      throw 'Multisig not found';
+    }
 
     const upgradeData = Buffer.alloc(4);
     upgradeData.writeInt32LE(4, 0);
 
-    const [programDataAddress] = PublicKey.findProgramAddressSync(
-      [new PublicKey(programId).toBuffer()],
-      new PublicKey('BPFLoaderUpgradeab1e11111111111111111111111')
-    );
     const keys: AccountMeta[] = [
       {
-        pubkey: programDataAddress,
+        pubkey: new PublicKey(programInfos.programDataAddress),
         isWritable: true,
         isSigner: false,
       },
@@ -74,7 +70,7 @@ const ChangeUpgradeAuthorityInput = ({
 
     const instructions = await createSquadTransactionInstructions({
       wallet,
-      multisigPda: new PublicKey(multisigPda),
+      multisigPda: new PublicKey(multisigAddress),
       ixs: [
         new TransactionInstruction({
           programId: new PublicKey('BPFLoaderUpgradeab1e11111111111111111111111'),
@@ -83,7 +79,7 @@ const ChangeUpgradeAuthorityInput = ({
         }),
       ],
       rpcUrl,
-      programId: new PublicKey(globalProgramId),
+      programId,
     });
 
     const message = new TransactionMessage({
@@ -111,12 +107,6 @@ const ChangeUpgradeAuthorityInput = ({
   return (
     <div>
       <Input
-        placeholder="Program ID"
-        type="text"
-        onChange={(e) => setProgramId(e.target.value)}
-        className="mb-3"
-      />
-      <Input
         placeholder="New Program Authority"
         type="text"
         onChange={(e) => setNewAuthority(e.target.value)}
@@ -131,7 +121,12 @@ const ChangeUpgradeAuthorityInput = ({
             error: (e) => `Failed to propose: ${e}`,
           })
         }
-        disabled={!isPublickey(programId) || !isPublickey(newAuthority) || !access}
+        disabled={
+            !programId ||
+            !isPublickey(newAuthority) ||
+            !isPublickey(programInfos.programAddress) ||
+            !isPublickey(programInfos.authority)
+        || !access}
       >
         Change Authority
       </Button>

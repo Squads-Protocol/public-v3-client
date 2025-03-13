@@ -11,6 +11,7 @@ import ConfigPage from './routes/config';
 import CreatePage from './routes/create';
 import SettingsPage from './routes/settings';
 import TransactionsPage from './routes/transactions';
+import ProgramsPage from "./routes/programs";
 import {Routes, Route, HashRouter} from 'react-router-dom';
 
 import './styles/globals.css'; // ✅ Load Tailwind styles
@@ -37,6 +38,7 @@ const App = () => {
                                         <Route path="/create" element={<CreatePage/>}/>
                                         <Route path="/settings" element={<SettingsPage/>}/>
                                         <Route path="/transactions" element={<TransactionsPage/>}/>
+                                        <Route path="/programs" element={<ProgramsPage />} />
                                         <Route path="*" element={<p>404 - Not Found</p>}/> {/* Catch-all route */}
                                     </Routes>
                                 </Suspense>

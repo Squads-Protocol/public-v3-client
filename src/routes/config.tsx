@@ -1,12 +1,10 @@
 import AddMemberInput from '@/components/AddMemberInput';
 import ChangeThresholdInput from '@/components/ChangeThresholdInput';
-import ChangeUpgradeAuthorityInput from '@/components/ChangeUpgradeAuthorityInput';
 import RemoveMemberButton from '@/components/RemoveMemberButton';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {clusterApiUrl} from '@solana/web3.js';
 import {useMultisigData} from '@/hooks/useMultisigData';
 import {useMultisig} from '@/hooks/useServices';
-import {DEFAULT_MULTISIG_PROGRAM_ID} from '@sqds/sdk';
 
 const ConfigurationPage = () => {
     const {rpcUrl, multisigAddress, programId} = useMultisigData();
@@ -77,27 +75,6 @@ const ConfigurationPage = () => {
                     </CardContent>
                 </Card>
             </div>
-            {multisigConfig && (
-                <div className="pb-4">
-                    <Card className="w-1/2">
-                        <CardHeader>
-                            <CardTitle>Change program Upgrade authority</CardTitle>
-                            <CardDescription>
-                                Change the upgrade authority of one of your programs.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ChangeUpgradeAuthorityInput
-                                multisigPda={multisigAddress!}
-                                rpcUrl={rpcUrl}
-                                globalProgramId={
-                                    programId.toBase58()
-                                }
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
         </div>
     );
 };
