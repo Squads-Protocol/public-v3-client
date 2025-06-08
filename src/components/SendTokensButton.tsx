@@ -6,33 +6,36 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {Button} from './ui/button';
-import {useState} from 'react';
+import { Button } from './ui/button';
+import { useState } from 'react';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import {useWallet} from '@solana/wallet-adapter-react';
-import {PublicKey, TransactionMessage, VersionedTransaction} from '@solana/web3.js';
-import {useWalletModal} from '@solana/wallet-adapter-react-ui';
-import {Input} from './ui/input';
-import {toast} from 'sonner';
-import {isPublickey} from '@/lib/isPublickey';
-import {useMultisigData} from '@/hooks/useMultisigData';
-import {useQueryClient} from '@tanstack/react-query';
-import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
-import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import { useWallet } from '@solana/wallet-adapter-react';
+import { PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { Input } from './ui/input';
+import { toast } from 'sonner';
+import { isPublickey } from '@/lib/isPublickey';
+import { useMultisigData } from '@/hooks/useMultisigData';
+import { useQueryClient } from '@tanstack/react-query';
+import { createSquadTransactionInstructions } from '@/lib/createSquadTransactionInstructions';
+import { useAccess } from "../lib/hooks/useAccess";
+import { waitForConfirmation } from "../lib/transactionConfirmation";
 
 type SendTokensProps = {
   tokenAccount: string;
   mint: string;
   decimals: number;
   multisigPda: string;
+  isToken2022?: boolean;
 };
 
-const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps) => {
+const SendTokens = ({ tokenAccount, mint, decimals, multisigPda, isToken2022 = false }: SendTokensProps) => {
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const [amount, setAmount] = useState<string>('');
@@ -40,7 +43,7 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
   const access = useAccess();
   const [isOpen, setIsOpen] = useState(false);
   const closeDialog = () => setIsOpen(false);
-  const {connection, multisigVault, rpcUrl, programId} = useMultisigData();
+  const { connection, multisigVault, rpcUrl, programId } = useMultisigData();
 
   const queryClient = useQueryClient();
   const parsedAmount = parseFloat(amount);
@@ -50,17 +53,22 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
     if (!wallet.publicKey || !multisigVault) {
       return;
     }
+
+    const tokenProgramId = isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+
     const recipientATA = getAssociatedTokenAddressSync(
       new PublicKey(mint),
       new PublicKey(recipient),
-      true
+      true,
+      tokenProgramId
     );
 
     const createRecipientATAInstruction = createAssociatedTokenAccountIdempotentInstruction(
       new PublicKey(multisigVault),
       recipientATA,
       new PublicKey(recipient),
-      new PublicKey(mint)
+      new PublicKey(mint),
+      tokenProgramId
     );
 
     const transferInstruction = createTransferCheckedInstruction(
@@ -69,7 +77,9 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
       recipientATA,
       new PublicKey(multisigVault),
       parsedAmount * 10 ** decimals,
-      decimals
+      decimals,
+      undefined,
+      tokenProgramId
     );
 
     const instructions = await createSquadTransactionInstructions({
@@ -83,7 +93,7 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
     const blockhash = (await connection.getLatestBlockhash()).blockhash;
 
     const message = new TransactionMessage({
-      instructions: instructions,
+      instructions,
       payerKey: wallet.publicKey,
       recentBlockhash: blockhash,
     }).compileToV0Message();
@@ -102,7 +112,7 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
     if (!sent.every((sent) => !!sent)) {
       throw `Unable to confirm transaction`;
     }
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     await new Promise((resolve) => setTimeout(resolve, 500));
     setAmount('');
     setRecipient('');
@@ -132,9 +142,9 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
             Create a proposal to transfer tokens to another address.
           </DialogDescription>
         </DialogHeader>
-        <Input placeholder="Recipient" type="text" onChange={(e) => setRecipient(e.target.value)}/>
+        <Input placeholder="Recipient" type="text" onChange={(e) => setRecipient(e.target.value)} />
         {isPublickey(recipient) ? null : <p className="text-xs">Invalid recipient address</p>}
-        <Input placeholder="Amount" type="number" onChange={(e) => setAmount(e.target.value)}/>
+        <Input placeholder="Amount" type="number" onChange={(e) => setAmount(e.target.value)} />
         {!isAmountValid && amount.length > 0 && (
           <p className="text-xs text-red-500">Invalid amount</p>
         )}
