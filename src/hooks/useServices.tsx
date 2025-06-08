@@ -1,10 +1,10 @@
 'use client';
 
-import {useSuspenseQuery} from '@tanstack/react-query';
-import {PublicKey} from '@solana/web3.js';
-import {useMultisigData} from '@/hooks/useMultisigData';
-import Squads, {getTxPDA, TransactionAccount} from '@sqds/sdk';
-import {useWallet} from '@solana/wallet-adapter-react';
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { PublicKey } from '@solana/web3.js';
+import { useMultisigData } from './useMultisigData';
+import Squads, { getTxPDA, TransactionAccount } from '@sqds/sdk';
+import { useWallet } from '@solana/wallet-adapter-react';
 import BN from 'bn.js';
 
 export interface TransactionObject {
@@ -14,7 +14,7 @@ export interface TransactionObject {
 
 // load multisig
 export const useMultisig = () => {
-  const {rpcUrl, programId, multisigAddress} = useMultisigData();
+  const { rpcUrl, programId, multisigAddress } = useMultisigData();
   const wallet = useWallet();
 
   return useSuspenseQuery({
@@ -22,9 +22,10 @@ export const useMultisig = () => {
     queryFn: async () => {
       if (!multisigAddress) return null;
       try {
+
         const multisigPubkey = new PublicKey(multisigAddress);
 
-        const squads = Squads.endpoint(rpcUrl, wallet as any, {multisigProgramId: programId});
+        const squads = Squads.endpoint(rpcUrl, wallet as any, { multisigProgramId: programId });
 
         return squads.getMultisig(multisigPubkey);
       } catch (error) {
@@ -36,7 +37,7 @@ export const useMultisig = () => {
 };
 
 export const useBalance = () => {
-  const {connection, multisigVault} = useMultisigData();
+  const { connection, multisigVault } = useMultisigData();
 
   return useSuspenseQuery({
     queryKey: ['balance', multisigVault?.toBase58()],
@@ -53,16 +54,27 @@ export const useBalance = () => {
 };
 
 export const useGetTokens = () => {
-  const {connection, multisigVault} = useMultisigData();
+  const { connection, multisigVault } = useMultisigData();
 
   return useSuspenseQuery({
     queryKey: ['tokenBalances', multisigVault?.toBase58()],
     queryFn: async () => {
       if (!multisigVault) return null;
       try {
-        return connection.getParsedTokenAccountsByOwner(multisigVault, {
-          programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
-        });
+        // Fetch both Token-2022 and regular SPL tokens
+        const [token2022Accounts, splAccounts] = await Promise.all([
+          connection.getParsedTokenAccountsByOwner(multisigVault, {
+            programId: new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'),
+          }),
+          connection.getParsedTokenAccountsByOwner(multisigVault, {
+            programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+          }),
+        ]);
+
+        // Combine both token lists
+        return {
+          value: [...token2022Accounts.value, ...splAccounts.value],
+        };
       } catch (error) {
         console.error(error);
         return null;
@@ -87,22 +99,22 @@ async function fetchTransactionData(
     return null;
   }
 
-  return {account: transaction, address: transactionPda};
+  return { account: transaction, address: transactionPda };
 }
 
 export const useTransactions = (startIndex: number, endIndex: number) => {
-  const {programId, multisigAddress, rpcUrl} = useMultisigData();
+  const { programId, multisigAddress, rpcUrl } = useMultisigData();
   const wallet = useWallet();
 
   return useSuspenseQuery({
-    queryKey: ['transactions', {startIndex, endIndex, multisigAddress, programId: programId.toBase58()}],
+    queryKey: ['transactions', { startIndex, endIndex, multisigAddress, programId: programId.toBase58() }],
     queryFn: async () => {
       if (!multisigAddress) return null;
       try {
         const multisigPda = new PublicKey(multisigAddress);
         const results: TransactionObject[] = [];
 
-        const squads = Squads.endpoint(rpcUrl, wallet as any, {multisigProgramId: programId});
+        const squads = Squads.endpoint(rpcUrl, wallet as any, { multisigProgramId: programId });
 
         for (let i = 0; i <= startIndex - endIndex; i++) {
           const index = BigInt(startIndex - i);

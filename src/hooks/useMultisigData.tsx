@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js';
-import { useRpcUrl, useProgramId } from '@/hooks/useSettings';
-import { useMultisigAddress } from '@/hooks/useMultisigAddress';
+import { useRpcUrl, useProgramId } from './useSettings';
+import { useMultisigAddress } from './useMultisigAddress';
 import { DEFAULT_MULTISIG_PROGRAM_ID, getAuthorityPDA } from '@sqds/sdk';
 import BN from 'bn.js';
 
