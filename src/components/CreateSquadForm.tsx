@@ -10,6 +10,7 @@ import { ValidationRules, useSquadForm } from '@/lib/hooks/useSquadForm';
 import { Link } from 'react-router-dom';
 import { useMultisigData } from '@/hooks/useMultisigData';
 import { useMultisigAddress } from '@/hooks/useMultisigAddress';
+import { sendAndConfirm } from '@/lib/sendAndConfirm';
 
 export default function CreateSquadForm({}: {}) {
   const wallet = useWallet();
@@ -18,10 +19,7 @@ export default function CreateSquadForm({}: {}) {
   const { setMultisigAddress } = useMultisigAddress();
   const validationRules = getValidationRules();
 
-  const { formState, handleChange, handleAddMember, onSubmit } = useSquadForm<{
-    signature: string;
-    multisig: string;
-  }>(
+  const { formState, handleChange, handleAddMember, onSubmit } = useSquadForm<void>(
     {
       threshold: 1,
       createKey: '',
@@ -35,49 +33,58 @@ export default function CreateSquadForm({}: {}) {
 
   async function submitHandler() {
     if (!wallet.connected || !wallet) throw new Error('Please connect your wallet.');
-    try {
-      const createKey = Keypair.generate();
 
-      const { transaction, multisig } = await createMultisig(
-        wallet,
-        connection,
-        wallet.publicKey!,
-        formState.values.members.memberKeys,
-        formState.values.threshold,
-        createKey.publicKey,
-        programId
-      );
+    const createKey = Keypair.generate();
 
-      const signature = await wallet.sendTransaction(transaction, connection, {
-        skipPreflight: true,
-      });
-      console.log('Transaction signature', signature);
-      toast.loading('Confirming...', {
-        id: 'create',
-      });
+    const { transaction, multisig } = await createMultisig(
+      wallet,
+      connection,
+      wallet.publicKey!,
+      formState.values.members.memberKeys,
+      formState.values.threshold,
+      createKey.publicKey,
+      programId
+    );
 
-      let sent = false;
-      const maxAttempts = 10;
-      const delayMs = 1000;
-      for (let attempt = 0; attempt <= maxAttempts && !sent; attempt++) {
-        const status = await connection.getSignatureStatus(signature);
-        if (status?.value?.confirmationStatus === 'confirmed') {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-          sent = true;
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
-      }
+    await sendAndConfirm(connection, transaction, wallet, null);
 
-      setMultisigAddress.mutate(multisig.toBase58());
+    setMultisigAddress.mutate(multisig.toBase58());
 
-      return { signature, multisig: multisig.toBase58() };
-    } catch (error: any) {
-      console.error(error);
-      return error;
-    } finally {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
+    const multisigAddress = multisig.toBase58();
+    const short = `${multisigAddress.slice(0, 4)}…${multisigAddress.slice(-4)}`;
+
+    toast.custom(
+      () => (
+        <div className="w-full flex items-center justify-between">
+          <div className="flex gap-4 items-center">
+            <CheckSquare className="w-4 h-4 text-green-600" />
+            <div className="flex flex-col space-y-0.5">
+              <p className="font-semibold">
+                Squad Created: <span className="font-normal">{short}</span>
+              </p>
+              <p className="font-light">Your new Squad has been set as active.</p>
+            </div>
+          </div>
+          <div className="flex gap-2 items-center">
+            <Copy
+              onClick={() => {
+                navigator.clipboard.writeText(multisigAddress);
+                toast.success('Copied address!');
+              }}
+              className="w-4 h-4 hover:text-stone-500 cursor-pointer"
+            />
+            <Link
+              to={`https://explorer.solana.com/address/${multisigAddress}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink className="w-4 h-4 hover:text-stone-500" />
+            </Link>
+          </div>
+        </div>
+      ),
+      {duration: 10000}
+    );
   }
 
   return (
@@ -159,46 +166,7 @@ export default function CreateSquadForm({}: {}) {
         </div>
       </div>
       <Button
-        onClick={() =>
-          toast.promise(onSubmit(submitHandler), {
-            id: 'create',
-            duration: 10000,
-            loading: 'Building Transaction...',
-            success: (res) => (
-              <div className="w-full flex items-center justify-between">
-                <div className="flex gap-4 items-center">
-                  <CheckSquare className="w-4 h-4 text-green-600" />
-                  <div className="flex flex-col space-y-0.5">
-                    <p className="font-semibold">
-                      Squad Created:{' '}
-                      <span className="font-normal">
-                        {res.multisig.slice(0, 4) + '...' + res.multisig.slice(-4)}
-                      </span>
-                    </p>
-                    <p className="font-light">Your new Squad has been set as active.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <Copy
-                    onClick={() => {
-                      navigator.clipboard.writeText(res.multisig);
-                      toast.success('Copied address!');
-                    }}
-                    className="w-4 h-4 hover:text-stone-500"
-                  />
-                  <Link
-                    to={`https://explorer.solana.com/address/${res.multisig}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ExternalLink className="w-4 h-4 hover:text-stone-500" />
-                  </Link>
-                </div>
-              </div>
-            ),
-            error: (e) => `Failed to create squad: ${e}`,
-          })
-        }
+        onClick={() => onSubmit(submitHandler).catch(() => {})}
       >
         Create Squad
       </Button>

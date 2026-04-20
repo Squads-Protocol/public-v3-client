@@ -20,7 +20,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import Squads, {getIxPDA, getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {signAllAndConfirm} from "../lib/sendAndConfirm";
 
 type ExecuteButtonProps = {
   multisigPda: string;
@@ -118,24 +118,8 @@ const ExecuteButton = ({
       );
     }
 
-    const signedTransactions = await wallet.signAllTransactions(transactions);
-    const signatures = [];
-    for (const signedTx of signedTransactions) {
-      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: true,
-      });
-      console.log('Transaction signature', signature);
-      toast.loading('Confirming...', {
-        id: 'transaction',
-      });
-      signatures.push(signature);
-    }
-    const sent = await waitForConfirmation(connection, signatures);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm ${sent.length} transactions`;
-    }
+    await signAllAndConfirm(connection, transactions, wallet);
     await queryClient.invalidateQueries({queryKey: ['transactions']});
-    await new Promise((resolve) => setTimeout(resolve, 500));
   };
   return (
     <Dialog>
@@ -167,14 +151,7 @@ const ExecuteButton = ({
         />
         <Button
           disabled={!isTransactionReady || !access}
-          onClick={() =>
-            toast.promise(executeTransaction, {
-              id: 'transaction',
-              loading: 'Loading...',
-              success: 'Transaction executed.',
-              error: 'Failed to execute. Check console for info.',
-            })
-          }
+          onClick={() => executeTransaction().catch(() => {})}
           className="mr-2"
         >
           Execute

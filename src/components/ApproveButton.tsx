@@ -9,7 +9,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import Squads, {getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {sendAndConfirm} from "../lib/sendAndConfirm";
 
 type ApproveButtonProps = {
   disabled: boolean;
@@ -62,31 +62,14 @@ const ApproveButton = ({
 
     transaction.add(await squads.buildApproveTransaction(new PublicKey(multisigPda), txPDA));
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    const sent = await waitForConfirmation(connection, [signature]);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm transaction`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Transaction approved.');
     await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
   return (
     <Button
       disabled={!isKindValid || !access || disabled}
-      onClick={() =>
-        toast.promise(approveProposal, {
-          id: 'transaction',
-          loading: 'Loading...',
-          success: 'Transaction approved.',
-          error: (e) => `Failed to approve: ${e}`,
-        })
-      }
+      onClick={() => approveProposal().catch(() => {})}
       className="mr-2"
     >
       Approve

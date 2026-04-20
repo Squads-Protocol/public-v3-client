@@ -24,7 +24,7 @@ import {useMultisigData} from '@/hooks/useMultisigData';
 import {useQueryClient} from '@tanstack/react-query';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
 import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {sendAndConfirm} from "../lib/sendAndConfirm";
 
 type SendSolProps = {
   multisigPda: string;
@@ -71,17 +71,7 @@ const SendSol = ({multisigPda}: SendSolProps) => {
 
     const transaction = new VersionedTransaction(message);
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    const sent = await waitForConfirmation(connection, [signature]);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm transaction`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Transfer proposed.');
     await queryClient.invalidateQueries({queryKey: ['transactions']});
     setAmount('');
     setRecipient('');
@@ -118,14 +108,7 @@ const SendSol = ({multisigPda}: SendSolProps) => {
           <p className="text-xs text-red-500">Invalid amount</p>
         )}
         <Button
-          onClick={() =>
-            toast.promise(transfer, {
-              id: 'transaction',
-              loading: 'Loading...',
-              success: 'Transfer proposed.',
-              error: (e) => `Failed to propose: ${e}`,
-            })
-          }
+          onClick={() => transfer().catch(() => {})}
           disabled={!isPublickey(recipient) || !access}
         >
           Transfer

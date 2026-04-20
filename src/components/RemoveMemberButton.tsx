@@ -6,7 +6,7 @@ import {toast} from 'sonner';
 import Squads from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
 import {useMultisigData} from "../hooks/useMultisigData";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useQueryClient} from "@tanstack/react-query";
 
 type RemoveMemberButtonProps = {
@@ -55,30 +55,13 @@ const RemoveMemberButton = ({
 
     const transaction = new VersionedTransaction(message);
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    const sent = await waitForConfirmation(connection, [signature]);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm transaction`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Remove member proposed.');
     await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
   return (
     <Button
       disabled={!access}
-      onClick={() =>
-        toast.promise(removeMember, {
-          id: 'transaction',
-          loading: 'Submitting...',
-          success: 'Remove Member action proposed.',
-          error: (e) => `Failed to propose: ${e}`,
-        })
-      }
+      onClick={() => removeMember().catch(() => {})}
     >
       Remove
     </Button>
