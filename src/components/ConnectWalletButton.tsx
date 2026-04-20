@@ -13,7 +13,7 @@ const ConnectWallet = () => {
         </Button>
       ) : (
         <Button onClick={disconnect} className="w-full h-12">
-          Disconnect Wallet
+          {publicKey.toBase58().slice(0, 4)}...{publicKey.toBase58().slice(-4)} · Disconnect
         </Button>
       )}
     </div>
