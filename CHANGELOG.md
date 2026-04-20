@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/Squads-Protocol/public-v3-client/compare/v1.1.0...v1.2.0) (2026-04-20)
+
+
+### Features
+
+* **tx-handling:** update toasts and process ([#10](https://github.com/Squads-Protocol/public-v3-client/issues/10)) ([6eb0704](https://github.com/Squads-Protocol/public-v3-client/commit/6eb070418501be1c3f473b8734232ca0f98faa1e))
+
 ## [1.1.0](https://github.com/Squads-Protocol/public-v3-client/compare/v1.0.4...v1.1.0) (2025-03-13)
 
 
