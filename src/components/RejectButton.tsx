@@ -8,7 +8,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import Squads, {getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {sendAndConfirm} from "../lib/sendAndConfirm";
 
 type RejectButtonProps = {
   multisigPda: string;
@@ -63,31 +63,14 @@ const RejectButton = ({
 
     transaction.add(await squads.buildRejectTransaction(new PublicKey(multisigPda), txPDA));
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    const sent = await waitForConfirmation(connection, [signature]);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm transaction rejection`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Transaction rejected.');
     await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
   return (
     <Button
       disabled={!isKindValid || !access || disabled}
-      onClick={() =>
-        toast.promise(rejectTransaction, {
-          id: 'transaction',
-          loading: 'Loading...',
-          success: 'Transaction rejected.',
-          error: (e) => `Failed to reject: ${e}`,
-        })
-      }
+      onClick={() => rejectTransaction().catch(() => {})}
       className="mr-2"
     >
       Reject

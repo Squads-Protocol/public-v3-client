@@ -9,7 +9,7 @@ import {toast} from 'sonner';
 import {isPublickey} from '@/lib/isPublickey';
 import Squads from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useQueryClient} from "@tanstack/react-query";
 import {useMultisigData} from "../hooks/useMultisigData";
 import {useMultisig} from "../hooks/useServices";
@@ -58,17 +58,7 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
 
     const transaction = new VersionedTransaction(message);
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    const sent = await waitForConfirmation(connection, [signature]);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm transaction`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Add member proposed.');
     await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
   return (
@@ -79,14 +69,7 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
         className="mb-3"
       />
       <Button
-        onClick={() =>
-          toast.promise(addMember, {
-            id: 'transaction',
-            loading: 'Loading...',
-            success: 'Add member action proposed.',
-            error: (e) => `Failed to propose: ${e}`,
-          })
-        }
+        onClick={() => addMember().catch(() => {})}
         disabled={!isPublickey(member) || !access}
       >
         Add Member

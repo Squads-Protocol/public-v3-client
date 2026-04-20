@@ -16,7 +16,7 @@ import {isPublickey} from '@/lib/isPublickey';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
 import {useMultisigData} from '@/hooks/useMultisigData';
 import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useQueryClient} from "@tanstack/react-query";
 import {SimplifiedProgramInfo} from "../hooks/useProgram";
 
@@ -90,17 +90,7 @@ const ChangeUpgradeAuthorityInput = ({
 
     const transaction = new VersionedTransaction(message);
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    const sent = await waitForConfirmation(connection, [signature]);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm transaction`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Upgrade authority change proposed.');
     await queryClient.invalidateQueries({queryKey: ['transactions']});
 
   };
@@ -113,14 +103,7 @@ const ChangeUpgradeAuthorityInput = ({
         className="mb-3"
       />
       <Button
-        onClick={() =>
-          toast.promise(changeUpgradeAuth, {
-            id: 'transaction',
-            loading: 'Loading...',
-            success: 'Upgrade authority change proposed.',
-            error: (e) => `Failed to propose: ${e}`,
-          })
-        }
+        onClick={() => changeUpgradeAuth().catch(() => {})}
         disabled={
             !programId ||
             !isPublickey(newAuthority) ||

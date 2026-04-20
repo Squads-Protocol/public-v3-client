@@ -17,7 +17,7 @@ import { isPublickey } from '@/lib/isPublickey';
 import { SimplifiedProgramInfo } from '../hooks/useProgram';
 import { useMultisigData } from '../hooks/useMultisigData';
 import { useQueryClient } from '@tanstack/react-query';
-import { waitForConfirmation } from '../lib/transactionConfirmation';
+import {sendAndConfirm} from '../lib/sendAndConfirm';
 import {createSquadTransactionInstructions} from "../lib/createSquadTransactionInstructions";
 
 type CreateProgramUpgradeInputProps = {
@@ -112,17 +112,7 @@ const CreateProgramUpgradeInput = ({
 
         const transaction = new VersionedTransaction(message);
 
-        const signature = await wallet.sendTransaction(transaction, connection, {
-            skipPreflight: true,
-        });
-        console.log('Transaction signature', signature);
-        toast.loading('Confirming...', {
-            id: 'transaction',
-        });
-        const sent = await waitForConfirmation(connection, [signature]);
-        if (!sent[0]) {
-            throw `Transaction failed or unable to confirm. Check ${signature}`;
-        }
+        await sendAndConfirm(connection, transaction, wallet, 'Program upgrade proposed.');
         await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     };
     return (
@@ -140,14 +130,7 @@ const CreateProgramUpgradeInput = ({
                 className="mb-3"
             />
             <Button
-                onClick={() =>
-                    toast.promise(changeUpgradeAuth, {
-                        id: 'transaction',
-                        loading: 'Loading...',
-                        success: 'Upgrade authority change proposed.',
-                        error: (e) => `Failed to propose: ${e}`,
-                    })
-                }
+                onClick={() => changeUpgradeAuth().catch(() => {})}
                 disabled={
                     !programId ||
                     !isPublickey(bufferAddress) ||

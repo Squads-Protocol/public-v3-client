@@ -9,7 +9,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import BN from 'bn.js';
 import Squads, {getTxPDA} from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
-import {waitForConfirmation} from "../lib/transactionConfirmation";
+import {sendAndConfirm} from "../lib/sendAndConfirm";
 
 type CancelButtonProps = {
   multisigPda: string;
@@ -60,31 +60,14 @@ const CancelButton = ({
 
     transaction.add(cancelIx);
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    const sent = await waitForConfirmation(connection, [signature]);
-    if (!sent.every((sent) => !!sent)) {
-      throw `Unable to confirm transaction`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Transaction cancelled.');
     await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
 
   return (
     <Button
       disabled={!isTransactionReady || !access}
-      onClick={() =>
-        toast.promise(cancelTransaction, {
-          id: 'transaction',
-          loading: 'Loading...',
-          success: 'Transaction cancelled.',
-          error: (e) => `Failed to cancel: ${e}`,
-        })
-      }
+      onClick={() => cancelTransaction().catch(() => {})}
       className="mr-2"
     >
       Cancel

@@ -1,10 +1,9 @@
 import {Connection, PublicKey, TransactionMessage, VersionedTransaction} from '@solana/web3.js';
 import {decodeAndDeserialize} from './decodeAndDeserialize';
 import {WalletContextState} from '@solana/wallet-adapter-react';
-import {toast} from 'sonner';
 import {loadLookupTables} from './getAccountsForSimulation';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
-import {waitForConfirmation} from "~/lib/transactionConfirmation";
+import {sendAndConfirm} from '~/lib/sendAndConfirm';
 
 export const importTransaction = async (
   tx: string,
@@ -47,18 +46,7 @@ export const importTransaction = async (
 
     const transaction = new VersionedTransaction(wrappedMessage);
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
-      skipPreflight: true,
-    });
-    console.log('Transaction signature', signature);
-    toast.loading('Confirming...', {
-      id: 'transaction',
-    });
-    
-    const hasSent = await waitForConfirmation(connection, [signature]);
-    if (!hasSent.every((s) => !!s)) {
-      throw `Unable to confirm transaction`;
-    }
+    await sendAndConfirm(connection, transaction, wallet, 'Transaction proposed.');
   } catch (error) {
     console.error(error);
     throw error;
