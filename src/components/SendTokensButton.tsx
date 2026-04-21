@@ -91,7 +91,10 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
     const transaction = new VersionedTransaction(message);
 
     await sendAndConfirm(connection, transaction, wallet, 'Transfer proposed.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+    ]);
     setAmount('');
     setRecipient('');
     closeDialog();

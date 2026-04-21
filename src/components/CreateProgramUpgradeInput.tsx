@@ -113,7 +113,10 @@ const CreateProgramUpgradeInput = ({
         const transaction = new VersionedTransaction(message);
 
         await sendAndConfirm(connection, transaction, wallet, 'Program upgrade proposed.');
-        await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        await Promise.all([
+          queryClient.invalidateQueries({queryKey: ['transactions']}),
+          queryClient.invalidateQueries({queryKey: ['multisig']}),
+        ]);
     };
     return (
         <div>

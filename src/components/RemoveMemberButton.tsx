@@ -56,7 +56,10 @@ const RemoveMemberButton = ({
     const transaction = new VersionedTransaction(message);
 
     await sendAndConfirm(connection, transaction, wallet, 'Remove member proposed.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+    ]);
   };
   return (
     <Button

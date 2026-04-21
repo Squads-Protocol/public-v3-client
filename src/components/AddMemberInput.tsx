@@ -59,7 +59,10 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
     const transaction = new VersionedTransaction(message);
 
     await sendAndConfirm(connection, transaction, wallet, 'Add member proposed.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+    ]);
   };
   return (
     <div>

@@ -1,7 +1,8 @@
-import { Table, TableCaption, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Pagination,
   PaginationContent,
+  PaginationItem,
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
@@ -12,6 +13,7 @@ import { useMultisig, useTransactions } from '@/hooks/useServices';
 import { useMultisigData } from '@/hooks/useMultisigData';
 import { useNavigate } from 'react-router';
 import { useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const TRANSACTIONS_PER_PAGE = 10;
 
@@ -39,6 +41,8 @@ export default function TransactionsPage() {
   const transactions = latestTransactions || [];
 
   return (
+    <ErrorBoundary>
+      <Suspense fallback={<div>Loading...</div>}>
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Transactions</h1>
@@ -47,11 +51,6 @@ export default function TransactionsPage() {
 
       <Suspense fallback={<div>Loading...</div>}>
         <Table>
-          <TableCaption>A list of your recent transactions.</TableCaption>
-          <TableCaption>
-            Page: {page} of {totalPages}
-          </TableCaption>
-
           <TableHeader>
             <TableRow>
               <TableHead className="w-8" aria-label="Toggle details" />
@@ -71,22 +70,31 @@ export default function TransactionsPage() {
         </Table>
       </Suspense>
 
-      <Pagination>
-        <PaginationContent>
-          {page > 1 && (
-            <PaginationPrevious
-              to={`/transactions?page=${page - 1}`}
-              onClick={() => navigate(`/transactions?page=${page - 1}`)}
-            />
-          )}
-          {page < totalPages && (
-            <PaginationNext
-              to={`/transactions?page=${page + 1}`}
-              onClick={() => navigate(`/transactions?page=${page + 1}`)}
-            />
-          )}
-        </PaginationContent>
-      </Pagination>
+      {totalPages > 0 && (
+        <Pagination className="mt-4">
+          <PaginationContent>
+            {page > 1 && (
+              <PaginationPrevious
+                to={`/transactions?page=${page - 1}`}
+                onClick={() => navigate(`/transactions?page=${page - 1}`)}
+              />
+            )}
+            <PaginationItem>
+              <span className="px-3 text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+            </PaginationItem>
+            {page < totalPages && (
+              <PaginationNext
+                to={`/transactions?page=${page + 1}`}
+                onClick={() => navigate(`/transactions?page=${page + 1}`)}
+              />
+            )}
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

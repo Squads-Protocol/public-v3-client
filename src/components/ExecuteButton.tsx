@@ -120,7 +120,12 @@ const ExecuteButton = ({
     }
 
     await signAllAndConfirm(connection, transactions, wallet);
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+      queryClient.invalidateQueries({queryKey: ['balance']}),
+      queryClient.invalidateQueries({queryKey: ['tokenBalances']}),
+    ]);
   };
 
   return (

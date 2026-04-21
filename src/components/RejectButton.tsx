@@ -63,8 +63,11 @@ const RejectButton = ({
 
     transaction.add(await squads.buildRejectTransaction(new PublicKey(multisigPda), txPDA));
 
-    await sendAndConfirm(connection, transaction, wallet, 'Transaction rejected.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await sendAndConfirm(connection, transaction, wallet, 'Submitted Rejection.');
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+    ]);
   };
 
   return (

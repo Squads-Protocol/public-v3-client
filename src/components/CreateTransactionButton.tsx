@@ -18,6 +18,7 @@ import {importTransaction} from '@/lib/transaction/importTransaction';
 import {useMultisigData} from '@/hooks/useMultisigData';
 import invariant from 'invariant';
 import {useAccess} from "../lib/hooks/useAccess";
+import {useQueryClient} from '@tanstack/react-query';
 
 const CreateTransaction = () => {
   const wallet = useWallet();
@@ -27,6 +28,7 @@ const CreateTransaction = () => {
 
   const {connection, multisigAddress, programId, multisigVault} = useMultisigData();
   const access = useAccess();
+  const queryClient = useQueryClient();
 
   const getSampleMessage = async () => {
     invariant(programId, 'Program ID not found');
@@ -100,7 +102,13 @@ const CreateTransaction = () => {
               disabled={!access}
               onClick={() =>
                 toast.promise(
-                  importTransaction(tx, connection, multisigAddress, programId.toBase58(), wallet),
+                  importTransaction(tx, connection, multisigAddress, programId.toBase58(), wallet).then(async (result) => {
+                    await Promise.all([
+                      queryClient.invalidateQueries({queryKey: ['transactions']}),
+                      queryClient.invalidateQueries({queryKey: ['multisig']}),
+                    ]);
+                    return result;
+                  }),
                   {
                     id: 'transaction',
                     loading: 'Building transaction...',

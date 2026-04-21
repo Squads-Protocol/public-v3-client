@@ -58,7 +58,10 @@ const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdI
     const transaction = new VersionedTransaction(message);
 
     await sendAndConfirm(connection, transaction, wallet, 'Threshold change proposed.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+    ]);
 
   };
   return (
