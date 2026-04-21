@@ -54,6 +54,7 @@ export default function TransactionsPage() {
 
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8" aria-label="Toggle details" />
               <TableHead>Index</TableHead>
               <TableHead>Public Key</TableHead>
               <TableHead>Proposal Status</TableHead>

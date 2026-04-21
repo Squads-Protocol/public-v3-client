@@ -48,7 +48,8 @@ const App = () => {
 
                     <Toaster
                         expand
-                        visibleToasts={3}
+                        closeButton
+                        visibleToasts={9}
                         icons={{
                             error: <AlertTriangle className="h-4 w-4 text-red-600"/>,
                             success: <CheckSquare className="h-4 w-4 text-green-600"/>,

@@ -42,6 +42,7 @@ const ExecuteButton = ({
   const access = useAccess();
 
   const isTransactionReady = proposalStatus === 'ExecuteReady';
+  const isDisabled = !isTransactionReady || !access;
 
   const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
@@ -121,11 +122,12 @@ const ExecuteButton = ({
     await signAllAndConfirm(connection, transactions, wallet);
     await queryClient.invalidateQueries({queryKey: ['transactions']});
   };
+
   return (
     <Dialog>
       <DialogTrigger
-        disabled={!isTransactionReady || !access}
-        className={`mr-2 h-10 px-4 py-2 ${!isTransactionReady ? `bg-primary/50` : `bg-primary hover:bg-primary/90 `} text-primary-foreground  rounded-md`}
+        disabled={isDisabled}
+        className={`mr-2 h-10 px-4 py-2 ${isDisabled ? `bg-primary/50 cursor-not-allowed` : `bg-primary hover:bg-primary/90`} text-primary-foreground rounded-md`}
       >
         Execute
       </DialogTrigger>
@@ -150,7 +152,7 @@ const ExecuteButton = ({
           value={computeUnitBudget}
         />
         <Button
-          disabled={!isTransactionReady || !access}
+          disabled={isDisabled}
           onClick={() => executeTransaction().catch(() => {})}
           className="mr-2"
         >
