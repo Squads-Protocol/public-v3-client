@@ -2,10 +2,9 @@ import {Connection, SignatureStatus, Transaction, VersionedTransaction} from '@s
 import {WalletContextState} from '@solana/wallet-adapter-react';
 import {toast} from 'sonner';
 import bs58 from 'bs58';
+import {txToastBody} from './TxToastBody';
 
-function truncateSig(sig: string): string {
-  return `${sig.slice(0, 8)}…`;
-}
+const PERSISTENT = {duration: Infinity, dismissible: true} as const;
 
 function parseSigningError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
@@ -33,10 +32,10 @@ function parseSendError(e: unknown): string {
   return `Send failed: ${String(e)}`;
 }
 
-function parseConfirmError(e: unknown, sig: string): string {
+function parseConfirmError(e: unknown): string {
   if (e instanceof Error) {
     if (/not confirmed|timed out/i.test(e.message)) {
-      return `Not confirmed after 30s — check explorer for ${truncateSig(sig)}.`;
+      return 'Not confirmed after 30s — check explorer.';
     }
     return e.message;
   }
@@ -83,7 +82,9 @@ function extractSignature(tx: Transaction | VersionedTransaction): string {
 
 /**
  * Signs a transaction with the connected wallet, sends it to the RPC, and
- * waits for confirmation — updating a single toast through each step.
+ * waits for confirmation. Each lifecycle step (Sign / Send / Confirm /
+ * Success or Error) is emitted as its own persistent, stackable toast that
+ * shows the full transaction signature with a copy-to-clipboard button.
  *
  * Pass successMessage=null to suppress the success toast when the caller
  * wants to show its own custom success UI.
@@ -96,7 +97,6 @@ export async function sendAndConfirm(
 ): Promise<string> {
   if (!wallet.signTransaction) throw new Error('Wallet does not support signing.');
 
-  // Ensure legacy transactions have a blockhash and fee payer before signing
   if (transaction instanceof Transaction) {
     if (!transaction.recentBlockhash) {
       const {blockhash, lastValidBlockHeight} = await connection.getLatestBlockhash();
@@ -108,44 +108,51 @@ export async function sendAndConfirm(
     }
   }
 
-  // ── 1. Sign ──────────────────────────────────────────────────────────────
-  const id = toast.loading('Signing with wallet…', {duration: Infinity});
+  const toastId = `tx-${crypto.randomUUID()}`;
+
+  toast.loading(txToastBody({label: 'Signing with wallet…'}), {id: toastId, ...PERSISTENT});
 
   let signedTx: Transaction | VersionedTransaction;
   try {
     signedTx = await wallet.signTransaction(transaction as any);
   } catch (e) {
-    toast.error(parseSigningError(e), {id});
+    toast.error(txToastBody({label: parseSigningError(e)}), {id: toastId, ...PERSISTENT});
     throw e;
   }
 
   const sig = extractSignature(signedTx);
-  const short = truncateSig(sig);
 
-  // ── 2. Send ───────────────────────────────────────────────────────────────
-  toast.loading(`Sending transaction ${short}…`, {id, duration: Infinity});
+  toast.loading(txToastBody({label: 'Sending transaction…'}), {id: toastId, ...PERSISTENT});
 
   try {
     await connection.sendRawTransaction(signedTx.serialize(), {skipPreflight: true});
   } catch (e) {
-    toast.error(parseSendError(e), {id});
+    toast.error(txToastBody({label: parseSendError(e), signature: sig}), {
+      id: toastId,
+      ...PERSISTENT,
+    });
     throw e;
   }
 
-  // ── 3. Confirm ────────────────────────────────────────────────────────────
-  toast.loading(`Confirming ${short}…`, {id, duration: Infinity});
+  toast.loading(txToastBody({label: 'Confirming transaction…'}), {id: toastId, ...PERSISTENT});
 
   try {
     await confirmWithBackoff(connection, sig);
   } catch (e) {
-    toast.error(parseConfirmError(e, sig), {id});
+    toast.error(txToastBody({label: parseConfirmError(e), signature: sig}), {
+      id: toastId,
+      ...PERSISTENT,
+    });
     throw e;
   }
 
   if (successMessage !== null) {
-    toast.success(successMessage, {id});
+    toast.success(txToastBody({label: successMessage, signature: sig}), {
+      id: toastId,
+      ...PERSISTENT,
+    });
   } else {
-    toast.dismiss(id);
+    toast.dismiss(toastId);
   }
 
   return sig;
@@ -153,8 +160,9 @@ export async function sendAndConfirm(
 
 /**
  * Signs multiple versioned transactions in a single wallet prompt, then sends
- * and confirms each one sequentially.  Used by ExecuteButton when a large
- * transaction is split across multiple instructions.
+ * and confirms each one sequentially. Each transaction emits its own
+ * persistent Send / Confirm / Success toasts so every signature stays
+ * visible after a multi-tx execute.
  */
 export async function signAllAndConfirm(
   connection: Connection,
@@ -165,45 +173,69 @@ export async function signAllAndConfirm(
 
   const count = transactions.length;
   const txLabel = count > 1 ? `${count} transactions` : 'transaction';
-  const id = toast.loading(`Signing ${txLabel} with wallet…`, {duration: Infinity});
+  const promptId = `tx-prompt-${crypto.randomUUID()}`;
+  toast.loading(txToastBody({label: `Signing ${txLabel} with wallet…`}), {
+    id: promptId,
+    ...PERSISTENT,
+  });
 
   let signedTxs: VersionedTransaction[];
   try {
     signedTxs = await wallet.signAllTransactions(transactions);
   } catch (e) {
-    toast.error(parseSigningError(e), {id});
+    toast.error(txToastBody({label: parseSigningError(e)}), {id: promptId, ...PERSISTENT});
     throw e;
   }
+
+  toast.dismiss(promptId);
 
   const signatures: string[] = [];
 
   for (let i = 0; i < signedTxs.length; i++) {
     const signedTx = signedTxs[i];
     const sig = bs58.encode(signedTx.signatures[0]);
-    const short = truncateSig(sig);
-    const progress = count > 1 ? ` (${i + 1}/${count})` : '';
+    const progress = count > 1 ? `(${i + 1}/${count})` : undefined;
+    const toastId = `tx-${i}-${crypto.randomUUID()}`;
 
-    toast.loading(`Sending transaction ${short}${progress}…`, {id, duration: Infinity});
+    toast.loading(txToastBody({label: 'Sending transaction…', progress}), {
+      id: toastId,
+      ...PERSISTENT,
+    });
     try {
       await connection.sendRawTransaction(signedTx.serialize(), {skipPreflight: true});
     } catch (e) {
-      toast.error(parseSendError(e), {id});
+      toast.error(txToastBody({label: parseSendError(e), signature: sig, progress}), {
+        id: toastId,
+        ...PERSISTENT,
+      });
       throw e;
     }
 
-    toast.loading(`Confirming ${short}${progress}…`, {id, duration: Infinity});
+    toast.loading(txToastBody({label: 'Confirming transaction…', progress}), {
+      id: toastId,
+      ...PERSISTENT,
+    });
     try {
       await confirmWithBackoff(connection, sig);
     } catch (e) {
-      toast.error(parseConfirmError(e, sig), {id});
+      toast.error(txToastBody({label: parseConfirmError(e), signature: sig, progress}), {
+        id: toastId,
+        ...PERSISTENT,
+      });
       throw e;
     }
+
+    toast.success(txToastBody({label: 'Transaction confirmed.', signature: sig, progress}), {
+      id: toastId,
+      ...PERSISTENT,
+    });
 
     signatures.push(sig);
   }
 
-  toast.success(count > 1 ? `All ${count} transactions confirmed.` : 'Transaction confirmed.', {
-    id,
-  });
+  if (count > 1) {
+    toast.success(txToastBody({label: `All ${count} transactions confirmed.`}), PERSISTENT);
+  }
+
   return signatures;
 }

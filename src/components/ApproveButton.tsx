@@ -62,8 +62,11 @@ const ApproveButton = ({
 
     transaction.add(await squads.buildApproveTransaction(new PublicKey(multisigPda), txPDA));
 
-    await sendAndConfirm(connection, transaction, wallet, 'Transaction approved.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await sendAndConfirm(connection, transaction, wallet, 'Submitted Approval.');
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+    ]);
   };
 
   return (

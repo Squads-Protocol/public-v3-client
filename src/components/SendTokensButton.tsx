@@ -24,6 +24,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
+import {useNavigate} from 'react-router-dom';
 
 type SendTokensProps = {
   tokenAccount: string;
@@ -39,10 +40,12 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
   const [recipient, setRecipient] = useState('');
   const access = useAccess();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const closeDialog = () => setIsOpen(false);
   const {connection, multisigVault, rpcUrl, programId} = useMultisigData();
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const parsedAmount = parseFloat(amount);
   const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
 
@@ -90,11 +93,20 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
 
     const transaction = new VersionedTransaction(message);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Transfer proposed.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
-    setAmount('');
-    setRecipient('');
-    closeDialog();
+    setIsLoading(true);
+    try {
+      await sendAndConfirm(connection, transaction, wallet, 'Transfer proposed.');
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: ['transactions']}),
+        queryClient.invalidateQueries({queryKey: ['multisig']}),
+      ]);
+      setAmount('');
+      setRecipient('');
+      closeDialog();
+      navigate('/transactions');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -128,7 +140,7 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
         )}
         <Button
           onClick={() => transfer().catch(() => {})}
-          disabled={!isPublickey(recipient) || !access}
+          disabled={!isPublickey(recipient) || !access || isLoading}
         >
           Transfer
         </Button>

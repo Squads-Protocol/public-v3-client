@@ -13,6 +13,7 @@ import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useQueryClient} from "@tanstack/react-query";
 import {useMultisigData} from "../hooks/useMultisigData";
 import {useMultisig} from "../hooks/useServices";
+import {useNavigate} from 'react-router-dom';
 
 type AddMemberInputProps = {
   multisigPda: string;
@@ -22,6 +23,8 @@ type AddMemberInputProps = {
 
 const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) => {
   const [member, setMember] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const access = useAccess();
@@ -58,8 +61,17 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
 
     const transaction = new VersionedTransaction(message);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Add member proposed.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    setIsLoading(true);
+    try {
+      await sendAndConfirm(connection, transaction, wallet, 'Add member proposed.');
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: ['transactions']}),
+        queryClient.invalidateQueries({queryKey: ['multisig']}),
+      ]);
+      navigate('/transactions');
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <div>
@@ -70,7 +82,7 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
       />
       <Button
         onClick={() => addMember().catch(() => {})}
-        disabled={!isPublickey(member) || !access}
+        disabled={!isPublickey(member) || !access || isLoading}
       >
         Add Member
       </Button>

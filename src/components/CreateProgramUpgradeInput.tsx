@@ -19,6 +19,7 @@ import { useMultisigData } from '../hooks/useMultisigData';
 import { useQueryClient } from '@tanstack/react-query';
 import {sendAndConfirm} from '../lib/sendAndConfirm';
 import {createSquadTransactionInstructions} from "../lib/createSquadTransactionInstructions";
+import {useNavigate} from 'react-router-dom';
 
 type CreateProgramUpgradeInputProps = {
     programInfos: SimplifiedProgramInfo;
@@ -33,6 +34,8 @@ const CreateProgramUpgradeInput = ({
 
     const [bufferAddress, setBufferAddress] = useState('');
     const [spillAddress, setSpillAddress] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
     const { connection, multisigAddress, programId, multisigVault, rpcUrl } = useMultisigData();
 
@@ -112,8 +115,17 @@ const CreateProgramUpgradeInput = ({
 
         const transaction = new VersionedTransaction(message);
 
-        await sendAndConfirm(connection, transaction, wallet, 'Program upgrade proposed.');
-        await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        setIsLoading(true);
+        try {
+          await sendAndConfirm(connection, transaction, wallet, 'Program upgrade proposed.');
+          await Promise.all([
+            queryClient.invalidateQueries({queryKey: ['transactions']}),
+            queryClient.invalidateQueries({queryKey: ['multisig']}),
+          ]);
+          navigate('/transactions');
+        } finally {
+          setIsLoading(false);
+        }
     };
     return (
         <div>
@@ -137,7 +149,8 @@ const CreateProgramUpgradeInput = ({
                     !isPublickey(spillAddress) ||
                     !isPublickey(programInfos.programAddress) ||
                     !isPublickey(programInfos.authority) ||
-                    !isPublickey(programInfos.programDataAddress)
+                    !isPublickey(programInfos.programDataAddress) ||
+                    isLoading
                 }
             >
                 Create upgrade

@@ -60,8 +60,11 @@ const CancelButton = ({
 
     transaction.add(cancelIx);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Transaction cancelled.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await sendAndConfirm(connection, transaction, wallet, 'Submitted Cancel.');
+    await Promise.all([
+      queryClient.invalidateQueries({queryKey: ['transactions']}),
+      queryClient.invalidateQueries({queryKey: ['multisig']}),
+    ]);
   };
 
   return (
