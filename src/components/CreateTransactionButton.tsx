@@ -19,12 +19,15 @@ import {useMultisigData} from '@/hooks/useMultisigData';
 import invariant from 'invariant';
 import {useAccess} from "../lib/hooks/useAccess";
 import {useQueryClient} from '@tanstack/react-query';
+import {useNavigate} from 'react-router-dom';
 
 const CreateTransaction = () => {
   const wallet = useWallet();
+  const navigate = useNavigate();
 
   const [tx, setTx] = useState('');
   const [open, setOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const {connection, multisigAddress, programId, multisigVault} = useMultisigData();
   const access = useAccess();
@@ -99,8 +102,9 @@ const CreateTransaction = () => {
           </Button>
           {multisigAddress && (
             <Button
-              disabled={!access}
-              onClick={() =>
+              disabled={!access || isImporting}
+              onClick={() => {
+                setIsImporting(true);
                 toast.promise(
                   importTransaction(tx, connection, multisigAddress, programId.toBase58(), wallet).then(async (result) => {
                     await Promise.all([
@@ -114,12 +118,17 @@ const CreateTransaction = () => {
                     loading: 'Building transaction...',
                     success: () => {
                       setOpen(false);
+                      setIsImporting(false);
+                      navigate('/transactions');
                       return 'Transaction proposed.';
                     },
-                    error: (e) => `Failed to propose: ${e}`,
+                    error: (e) => {
+                      setIsImporting(false);
+                      return `Failed to propose: ${e}`;
+                    },
                   }
-                )
-              }
+                );
+              }}
             >
               Import
             </Button>

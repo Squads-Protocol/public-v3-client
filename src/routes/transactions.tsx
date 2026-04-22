@@ -17,17 +17,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const TRANSACTIONS_PER_PAGE = 10;
 
-export default function TransactionsPage() {
-  const location = useLocation();
+function TransactionsContent({ page }: { page: number }) {
   const navigate = useNavigate();
-  const pageParam = new URLSearchParams(location.search).get('page');
-  let page = pageParam ? parseInt(pageParam, 10) : 1;
-  if (page < 1) {
-    page = 1;
-  }
-
   const { multisigAddress, programId } = useMultisigData();
-
   const { data } = useMultisig();
 
   const totalTransactions = Number(data ? data.transactionIndex : 0);
@@ -41,34 +33,23 @@ export default function TransactionsPage() {
   const transactions = latestTransactions || [];
 
   return (
-    <ErrorBoundary>
-      <Suspense fallback={<div>Loading...</div>}>
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Transactions</h1>
-        <CreateTransaction />
-      </div>
-
-      <Suspense fallback={<div>Loading...</div>}>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-8" aria-label="Toggle details" />
-              <TableHead>Index</TableHead>
-              <TableHead>Public Key</TableHead>
-              <TableHead>Proposal Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <Suspense fallback={<div>Loading...</div>}>
-            <TransactionTable
-              multisigPda={multisigAddress!}
-              transactions={transactions}
-              programId={programId!.toBase58()}
-            />
-          </Suspense>
-        </Table>
-      </Suspense>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-8" aria-label="Toggle details" />
+            <TableHead>Index</TableHead>
+            <TableHead>Public Key</TableHead>
+            <TableHead>Proposal Status</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TransactionTable
+          multisigPda={multisigAddress!}
+          transactions={transactions}
+          programId={programId!.toBase58()}
+        />
+      </Table>
 
       {totalPages > 0 && (
         <Pagination className="mt-4">
@@ -93,8 +74,27 @@ export default function TransactionsPage() {
           </PaginationContent>
         </Pagination>
       )}
-    </div>
-      </Suspense>
+    </>
+  );
+}
+
+export default function TransactionsPage() {
+  const location = useLocation();
+  const pageParam = new URLSearchParams(location.search).get('page');
+  let page = pageParam ? parseInt(pageParam, 10) : 1;
+  if (page < 1) page = 1;
+
+  return (
+    <ErrorBoundary>
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Transactions</h1>
+          <CreateTransaction />
+        </div>
+        <Suspense fallback={<div>Loading...</div>}>
+          <TransactionsContent page={page} />
+        </Suspense>
+      </div>
     </ErrorBoundary>
   );
 }

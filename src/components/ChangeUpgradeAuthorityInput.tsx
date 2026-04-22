@@ -19,6 +19,7 @@ import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useQueryClient} from "@tanstack/react-query";
 import {SimplifiedProgramInfo} from "../hooks/useProgram";
+import {useNavigate} from 'react-router-dom';
 
 type ChangeUpgradeAuthorityInputProps = {
   programInfos: SimplifiedProgramInfo;
@@ -28,6 +29,8 @@ const ChangeUpgradeAuthorityInput = ({
                                        programInfos
                                      }: ChangeUpgradeAuthorityInputProps) => {
   const [newAuthority, setNewAuthority] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const {multisigVault, connection, multisigAddress, rpcUrl, programId} = useMultisigData();
@@ -90,12 +93,17 @@ const ChangeUpgradeAuthorityInput = ({
 
     const transaction = new VersionedTransaction(message);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Upgrade authority change proposed.');
-    await Promise.all([
-      queryClient.invalidateQueries({queryKey: ['transactions']}),
-      queryClient.invalidateQueries({queryKey: ['multisig']}),
-    ]);
-
+    setIsLoading(true);
+    try {
+      await sendAndConfirm(connection, transaction, wallet, 'Upgrade authority change proposed.');
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: ['transactions']}),
+        queryClient.invalidateQueries({queryKey: ['multisig']}),
+      ]);
+      navigate('/transactions');
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <div>
@@ -111,8 +119,9 @@ const ChangeUpgradeAuthorityInput = ({
             !programId ||
             !isPublickey(newAuthority) ||
             !isPublickey(programInfos.programAddress) ||
-            !isPublickey(programInfos.authority)
-        || !access}
+            !isPublickey(programInfos.authority) ||
+            !access ||
+            isLoading}
       >
         Change Authority
       </Button>

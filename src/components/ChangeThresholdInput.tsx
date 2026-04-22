@@ -12,6 +12,7 @@ import {useMultisig} from "../hooks/useServices";
 import invariant from "invariant";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useQueryClient} from "@tanstack/react-query";
+import {useNavigate} from 'react-router-dom';
 
 type ChangeThresholdInputProps = {
   multisigPda: string;
@@ -21,6 +22,8 @@ type ChangeThresholdInputProps = {
 
 const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdInputProps) => {
   const [threshold, setThreshold] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const access = useAccess();
@@ -57,12 +60,17 @@ const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdI
 
     const transaction = new VersionedTransaction(message);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Threshold change proposed.');
-    await Promise.all([
-      queryClient.invalidateQueries({queryKey: ['transactions']}),
-      queryClient.invalidateQueries({queryKey: ['multisig']}),
-    ]);
-
+    setIsLoading(true);
+    try {
+      await sendAndConfirm(connection, transaction, wallet, 'Threshold change proposed.');
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: ['transactions']}),
+        queryClient.invalidateQueries({queryKey: ['multisig']}),
+      ]);
+      navigate('/transactions');
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <div>
@@ -74,7 +82,7 @@ const ChangeThresholdInput = ({multisigPda, rpcUrl, programId}: ChangeThresholdI
       />
       <Button
         onClick={() => changeThreshold().catch(() => {})}
-        disabled={!threshold || !access}
+        disabled={!threshold || !access || isLoading}
       >
         Change Threshold
       </Button>

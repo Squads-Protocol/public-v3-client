@@ -2,12 +2,14 @@ import {Connection, PublicKey, TransactionMessage, VersionedTransaction} from '@
 import {Button} from './ui/button';
 import {useWallet} from '@solana/wallet-adapter-react';
 import {useWalletModal} from '@solana/wallet-adapter-react-ui';
+import {useState} from 'react';
 import {toast} from 'sonner';
 import Squads from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
 import {useMultisigData} from "../hooks/useMultisigData";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useQueryClient} from "@tanstack/react-query";
+import {useNavigate} from 'react-router-dom';
 
 type RemoveMemberButtonProps = {
   rpcUrl: string;
@@ -26,6 +28,8 @@ const RemoveMemberButton = ({
   const walletModal = useWalletModal();
   const access = useAccess();
   const {connection} = useMultisigData();
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const member = new PublicKey(memberKey);
   const queryClient = useQueryClient();
@@ -55,15 +59,21 @@ const RemoveMemberButton = ({
 
     const transaction = new VersionedTransaction(message);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Remove member proposed.');
-    await Promise.all([
-      queryClient.invalidateQueries({queryKey: ['transactions']}),
-      queryClient.invalidateQueries({queryKey: ['multisig']}),
-    ]);
+    setIsLoading(true);
+    try {
+      await sendAndConfirm(connection, transaction, wallet, 'Remove member proposed.');
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey: ['transactions']}),
+        queryClient.invalidateQueries({queryKey: ['multisig']}),
+      ]);
+      navigate('/transactions');
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <Button
-      disabled={!access}
+      disabled={!access || isLoading}
       onClick={() => removeMember().catch(() => {})}
     >
       Remove
