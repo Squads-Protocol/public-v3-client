@@ -13,16 +13,13 @@ export const importTransaction = async (
   wallet: WalletContextState
 ) => {
   if (!wallet.publicKey) {
-    throw 'Please connect your wallet.';
+    throw new Error('Please connect your wallet.');
   }
   try {
     const {message, version} = decodeAndDeserialize(tx);
 
     const addressLookupTableAccounts =
       version === 0 ? await loadLookupTables(connection, message.compileToV0Message()) : [];
-
-    console.log(addressLookupTableAccounts);
-    console.log(message);
 
     const originalMessage = TransactionMessage.decompile(message.compileToV0Message(), {
       addressLookupTableAccounts,
@@ -48,7 +45,6 @@ export const importTransaction = async (
 
     await sendAndConfirm(connection, transaction, wallet, 'Transaction proposed.');
   } catch (error) {
-    console.error(error);
     throw error;
   }
 };

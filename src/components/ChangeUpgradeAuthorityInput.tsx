@@ -17,9 +17,8 @@ import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionIn
 import {useMultisigData} from '@/hooks/useMultisigData';
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
-import {useQueryClient} from "@tanstack/react-query";
 import {SimplifiedProgramInfo} from "../hooks/useProgram";
-import {useNavigate} from 'react-router-dom';
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type ChangeUpgradeAuthorityInputProps = {
   programInfos: SimplifiedProgramInfo;
@@ -30,12 +29,11 @@ const ChangeUpgradeAuthorityInput = ({
                                      }: ChangeUpgradeAuthorityInputProps) => {
   const [newAuthority, setNewAuthority] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const invalidateMultisig = useInvalidateMultisig();
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const {multisigVault, connection, multisigAddress, rpcUrl, programId} = useMultisigData();
   const access = useAccess();
-  const queryClient = useQueryClient();
 
   const changeUpgradeAuth = async () => {
     if (!wallet.publicKey) {
@@ -44,10 +42,12 @@ const ChangeUpgradeAuthorityInput = ({
     }
 
     if (!multisigVault) {
-      throw 'Multisig vault not found';
+      toast.error('Multisig vault not found');
+      return;
     }
     if (!multisigAddress) {
-      throw 'Multisig not found';
+      toast.error('Multisig not found');
+      return;
     }
 
     const upgradeData = Buffer.alloc(4);
@@ -96,11 +96,7 @@ const ChangeUpgradeAuthorityInput = ({
     setIsLoading(true);
     try {
       await sendAndConfirm(connection, transaction, wallet, 'Upgrade authority change proposed.');
-      await Promise.all([
-        queryClient.invalidateQueries({queryKey: ['transactions']}),
-        queryClient.invalidateQueries({queryKey: ['multisig']}),
-      ]);
-      navigate('/transactions');
+      await invalidateMultisig();
     } finally {
       setIsLoading(false);
     }

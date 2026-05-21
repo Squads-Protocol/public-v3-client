@@ -18,12 +18,11 @@ import {importTransaction} from '@/lib/transaction/importTransaction';
 import {useMultisigData} from '@/hooks/useMultisigData';
 import invariant from 'invariant';
 import {useAccess} from "../lib/hooks/useAccess";
-import {useQueryClient} from '@tanstack/react-query';
-import {useNavigate} from 'react-router-dom';
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 const CreateTransaction = () => {
   const wallet = useWallet();
-  const navigate = useNavigate();
+  const invalidateMultisig = useInvalidateMultisig();
 
   const [tx, setTx] = useState('');
   const [open, setOpen] = useState(false);
@@ -31,7 +30,6 @@ const CreateTransaction = () => {
 
   const {connection, multisigAddress, programId, multisigVault} = useMultisigData();
   const access = useAccess();
-  const queryClient = useQueryClient();
 
   const getSampleMessage = async () => {
     invariant(programId, 'Program ID not found');
@@ -64,7 +62,7 @@ const CreateTransaction = () => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setTx(''); setIsImporting(false); } setOpen(o); }}>
       <DialogTrigger
         className="h-10 px-4 py-2 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md">
         Import Transaction
@@ -106,20 +104,14 @@ const CreateTransaction = () => {
               onClick={() => {
                 setIsImporting(true);
                 toast.promise(
-                  importTransaction(tx, connection, multisigAddress, programId.toBase58(), wallet).then(async (result) => {
-                    await Promise.all([
-                      queryClient.invalidateQueries({queryKey: ['transactions']}),
-                      queryClient.invalidateQueries({queryKey: ['multisig']}),
-                    ]);
-                    return result;
-                  }),
+                  importTransaction(tx, connection, multisigAddress, programId.toBase58(), wallet),
                   {
                     id: 'transaction',
                     loading: 'Building transaction...',
-                    success: () => {
+                    success: async () => {
+                      await invalidateMultisig();
                       setOpen(false);
                       setIsImporting(false);
-                      navigate('/transactions');
                       return 'Transaction proposed.';
                     },
                     error: (e) => {

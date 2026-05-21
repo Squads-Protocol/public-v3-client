@@ -30,7 +30,7 @@ const SetRpcUrlInput = ({ onUpdate }: { onUpdate?: () => void }) => {
         if (onUpdate) onUpdate();
 
     } else {
-      throw 'Please enter a valid URL.';
+      throw new Error('Please enter a valid URL.');
     }
   };
 

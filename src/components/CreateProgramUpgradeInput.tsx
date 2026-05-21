@@ -16,10 +16,9 @@ import { toast } from 'sonner';
 import { isPublickey } from '@/lib/isPublickey';
 import { SimplifiedProgramInfo } from '../hooks/useProgram';
 import { useMultisigData } from '../hooks/useMultisigData';
-import { useQueryClient } from '@tanstack/react-query';
 import {sendAndConfirm} from '../lib/sendAndConfirm';
 import {createSquadTransactionInstructions} from "../lib/createSquadTransactionInstructions";
-import {useNavigate} from 'react-router-dom';
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type CreateProgramUpgradeInputProps = {
     programInfos: SimplifiedProgramInfo;
@@ -28,14 +27,13 @@ type CreateProgramUpgradeInputProps = {
 const CreateProgramUpgradeInput = ({
                                        programInfos,
                                    }: CreateProgramUpgradeInputProps) => {
-    const queryClient = useQueryClient();
     const wallet = useWallet();
     const walletModal = useWalletModal();
 
     const [bufferAddress, setBufferAddress] = useState('');
     const [spillAddress, setSpillAddress] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const navigate = useNavigate();
+    const invalidateMultisig = useInvalidateMultisig();
 
     const { connection, multisigAddress, programId, multisigVault, rpcUrl } = useMultisigData();
 
@@ -43,13 +41,15 @@ const CreateProgramUpgradeInput = ({
     const changeUpgradeAuth = async () => {
         if (!wallet.publicKey) {
             walletModal.setVisible(true);
-            throw 'Wallet not connected';
+            return;
         }
         if (!multisigVault) {
-            throw 'Multisig vault not found';
+            toast.error('Multisig vault not found');
+            return;
         }
         if (!multisigAddress) {
-            throw 'Multisig not found';
+            toast.error('Multisig not found');
+            return;
         }
         const vaultAddress = new PublicKey(multisigVault);
         const upgradeData = Buffer.alloc(4);
@@ -118,11 +118,7 @@ const CreateProgramUpgradeInput = ({
         setIsLoading(true);
         try {
           await sendAndConfirm(connection, transaction, wallet, 'Program upgrade proposed.');
-          await Promise.all([
-            queryClient.invalidateQueries({queryKey: ['transactions']}),
-            queryClient.invalidateQueries({queryKey: ['multisig']}),
-          ]);
-          navigate('/transactions');
+          await invalidateMultisig();
         } finally {
           setIsLoading(false);
         }

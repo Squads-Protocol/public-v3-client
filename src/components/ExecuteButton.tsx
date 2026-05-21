@@ -21,6 +21,7 @@ import Squads, {getIxPDA, getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
 import {signAllAndConfirm} from "../lib/sendAndConfirm";
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type ExecuteButtonProps = {
   multisigPda: string;
@@ -46,6 +47,7 @@ const ExecuteButton = ({
 
   const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
+  const invalidateMultisig = useInvalidateMultisig();
 
   const executeTransaction = async () => {
     if (!wallet.publicKey) {
@@ -93,7 +95,6 @@ const ExecuteButton = ({
       transactions.push(
         ...(await Promise.all(
           range(txState.executedIndex + 1, txState.instructionIndex).map(async (ixIndex) => {
-            console.log(ixIndex);
             const [ixPDA] = getIxPDA(txPDA, new BN(ixIndex), new PublicKey(programId));
             const ixExecuteIx = await squads.buildExecuteInstruction(txPDA, ixPDA);
 
@@ -121,8 +122,7 @@ const ExecuteButton = ({
 
     await signAllAndConfirm(connection, transactions, wallet);
     await Promise.all([
-      queryClient.invalidateQueries({queryKey: ['transactions']}),
-      queryClient.invalidateQueries({queryKey: ['multisig']}),
+      invalidateMultisig(false),
       queryClient.invalidateQueries({queryKey: ['balance']}),
       queryClient.invalidateQueries({queryKey: ['tokenBalances']}),
     ]);
@@ -152,7 +152,7 @@ const ExecuteButton = ({
 
         <h3>Compute Unit Budget</h3>
         <Input
-          placeholder="Priority Fee"
+          placeholder="Compute Unit Budget"
           onChange={(e) => setComputeUnitBudget(Number(e.target.value))}
           value={computeUnitBudget}
         />

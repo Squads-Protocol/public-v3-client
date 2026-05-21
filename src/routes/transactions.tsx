@@ -32,6 +32,10 @@ function TransactionsContent({ page }: { page: number }) {
 
   const transactions = latestTransactions || [];
 
+  if (totalPages > 0 && page > totalPages) {
+    return <p className="text-sm text-muted-foreground">Page {page} does not exist. <a href="#/transactions" className="underline">Go to page 1</a></p>;
+  }
+
   return (
     <>
       <Table>

@@ -18,7 +18,7 @@ const SetProgramIdInput = () => {
       await setProgramId.mutateAsync(programId); // Use React Query mutation
       setProgramIdState(''); // Clear input field after submission
     } else {
-      throw 'Please enter a valid program.';
+      throw new Error('Please enter a valid program.');
     }
   };
 

@@ -4,11 +4,11 @@ import {useWallet} from '@solana/wallet-adapter-react';
 import {useWalletModal} from '@solana/wallet-adapter-react-ui';
 import {toast} from 'sonner';
 import {useMultisigData} from '@/hooks/useMultisigData';
-import {useQueryClient} from '@tanstack/react-query';
 import Squads, {getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type RejectButtonProps = {
   multisigPda: string;
@@ -30,7 +30,7 @@ const RejectButton = ({
   const access = useAccess();
 
   const {connection, rpcUrl} = useMultisigData();
-  const queryClient = useQueryClient();
+  const invalidateMultisig = useInvalidateMultisig();
 
   const validKinds = ['Active'];
   const isKindValid = validKinds.includes(proposalStatus);
@@ -64,10 +64,7 @@ const RejectButton = ({
     transaction.add(await squads.buildRejectTransaction(new PublicKey(multisigPda), txPDA));
 
     await sendAndConfirm(connection, transaction, wallet, 'Submitted Rejection.');
-    await Promise.all([
-      queryClient.invalidateQueries({queryKey: ['transactions']}),
-      queryClient.invalidateQueries({queryKey: ['multisig']}),
-    ]);
+    await invalidateMultisig(false);
   };
 
   return (

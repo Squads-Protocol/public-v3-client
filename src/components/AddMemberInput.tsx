@@ -10,10 +10,9 @@ import {isPublickey} from '@/lib/isPublickey';
 import Squads from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
-import {useQueryClient} from "@tanstack/react-query";
 import {useMultisigData} from "../hooks/useMultisigData";
 import {useMultisig} from "../hooks/useServices";
-import {useNavigate} from 'react-router-dom';
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type AddMemberInputProps = {
   multisigPda: string;
@@ -24,11 +23,10 @@ type AddMemberInputProps = {
 const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) => {
   const [member, setMember] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const invalidateMultisig = useInvalidateMultisig();
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const access = useAccess();
-  const queryClient = useQueryClient();
   const {connection} = useMultisigData();
   const {data: multisig} = useMultisig();
   const addMember = async () => {
@@ -39,7 +37,8 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
     const newMember = new PublicKey(member);
     const exists = !!multisig?.keys.find((key) => key.equals(newMember));
     if (exists) {
-      throw 'Member already exists';
+      toast.error('Member already exists');
+      return;
     }
 
     const squads = Squads.endpoint(rpcUrl, wallet as any, {
@@ -64,11 +63,7 @@ const AddMemberInput = ({multisigPda, rpcUrl, programId}: AddMemberInputProps) =
     setIsLoading(true);
     try {
       await sendAndConfirm(connection, transaction, wallet, 'Add member proposed.');
-      await Promise.all([
-        queryClient.invalidateQueries({queryKey: ['transactions']}),
-        queryClient.invalidateQueries({queryKey: ['multisig']}),
-      ]);
-      navigate('/transactions');
+      await invalidateMultisig();
     } finally {
       setIsLoading(false);
     }

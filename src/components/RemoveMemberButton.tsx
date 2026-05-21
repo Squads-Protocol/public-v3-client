@@ -8,8 +8,7 @@ import Squads from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
 import {useMultisigData} from "../hooks/useMultisigData";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
-import {useQueryClient} from "@tanstack/react-query";
-import {useNavigate} from 'react-router-dom';
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type RemoveMemberButtonProps = {
   rpcUrl: string;
@@ -29,10 +28,9 @@ const RemoveMemberButton = ({
   const access = useAccess();
   const {connection} = useMultisigData();
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const invalidateMultisig = useInvalidateMultisig();
 
   const member = new PublicKey(memberKey);
-  const queryClient = useQueryClient();
   
   const removeMember = async () => {
     if (!wallet.publicKey) {
@@ -62,11 +60,7 @@ const RemoveMemberButton = ({
     setIsLoading(true);
     try {
       await sendAndConfirm(connection, transaction, wallet, 'Remove member proposed.');
-      await Promise.all([
-        queryClient.invalidateQueries({queryKey: ['transactions']}),
-        queryClient.invalidateQueries({queryKey: ['multisig']}),
-      ]);
-      navigate('/transactions');
+      await invalidateMultisig();
     } finally {
       setIsLoading(false);
     }

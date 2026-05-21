@@ -5,11 +5,11 @@ import {useWallet} from '@solana/wallet-adapter-react';
 import {useWalletModal} from '@solana/wallet-adapter-react-ui';
 import {toast} from 'sonner';
 import {useMultisigData} from '@/hooks/useMultisigData';
-import {useQueryClient} from '@tanstack/react-query';
 import Squads, {getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type ApproveButtonProps = {
   disabled: boolean;
@@ -31,7 +31,7 @@ const ApproveButton = ({
   const validKinds = ['Active', 'Draft'];
   const isKindValid = validKinds.includes(proposalStatus);
   const {connection, rpcUrl} = useMultisigData();
-  const queryClient = useQueryClient();
+  const invalidateMultisig = useInvalidateMultisig();
   const access = useAccess();
 
   const approveProposal = async () => {
@@ -63,10 +63,7 @@ const ApproveButton = ({
     transaction.add(await squads.buildApproveTransaction(new PublicKey(multisigPda), txPDA));
 
     await sendAndConfirm(connection, transaction, wallet, 'Submitted Approval.');
-    await Promise.all([
-      queryClient.invalidateQueries({queryKey: ['transactions']}),
-      queryClient.invalidateQueries({queryKey: ['multisig']}),
-    ]);
+    await invalidateMultisig(false);
   };
 
   return (
