@@ -10,7 +10,7 @@ export const simulateEncodedTransaction = async (
   wallet: WalletContextState
 ) => {
   if (!wallet.publicKey) {
-    throw "Please connect your wallet.";
+    throw new Error('Please connect your wallet.');
   }
   try {
     const { message, version } = decodeAndDeserialize(tx);
@@ -37,11 +37,9 @@ export const simulateEncodedTransaction = async (
     });
 
     if (value.err) {
-      console.error(value.err);
-      throw "Simulation failed";
+      throw new Error(`Simulation failed: ${JSON.stringify(value.err)}`);
     }
   } catch (error: any) {
-    console.error(error);
-    throw new Error(error);
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };

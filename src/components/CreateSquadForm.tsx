@@ -32,7 +32,10 @@ export default function CreateSquadForm({}: {}) {
   );
 
   async function submitHandler() {
-    if (!wallet.connected || !wallet) throw new Error('Please connect your wallet.');
+    if (!wallet.connected || !wallet) {
+      toast.error('Please connect your wallet.');
+      return;
+    }
 
     const createKey = Keypair.generate();
 

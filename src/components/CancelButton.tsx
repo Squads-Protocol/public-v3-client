@@ -5,11 +5,11 @@ import {useWallet} from '@solana/wallet-adapter-react';
 import {useWalletModal} from '@solana/wallet-adapter-react-ui';
 import {toast} from 'sonner';
 import {useMultisigData} from '@/hooks/useMultisigData';
-import {useQueryClient} from '@tanstack/react-query';
 import BN from 'bn.js';
 import Squads, {getTxPDA} from '@sqds/sdk';
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type CancelButtonProps = {
   multisigPda: string;
@@ -31,7 +31,7 @@ const CancelButton = ({
   const isTransactionReady = proposalStatus === 'ExecuteReady';
 
   const {connection, rpcUrl} = useMultisigData();
-  const queryClient = useQueryClient();
+  const invalidateMultisig = useInvalidateMultisig();
 
   const cancelTransaction = async () => {
     if (!wallet.publicKey) {
@@ -60,8 +60,8 @@ const CancelButton = ({
 
     transaction.add(cancelIx);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Transaction cancelled.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await sendAndConfirm(connection, transaction, wallet, 'Submitted Cancel.');
+    await invalidateMultisig(false);
   };
 
   return (

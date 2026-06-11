@@ -21,10 +21,10 @@ import {Input} from './ui/input';
 import {toast} from 'sonner';
 import {isPublickey} from '@/lib/isPublickey';
 import {useMultisigData} from '@/hooks/useMultisigData';
-import {useQueryClient} from '@tanstack/react-query';
 import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionInstructions';
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type SendSolProps = {
   multisigPda: string;
@@ -36,12 +36,18 @@ const SendSol = ({multisigPda}: SendSolProps) => {
   const [amount, setAmount] = useState<string>('');
   const [recipient, setRecipient] = useState('');
   const {connection, multisigVault, rpcUrl, programId} = useMultisigData();
-  const queryClient = useQueryClient();
+  const invalidateMultisig = useInvalidateMultisig();
   const parsedAmount = parseFloat(amount);
   const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
   const access = useAccess();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const closeDialog = () => setIsOpen(false);
+  const resetForm = () => {
+    setAmount('');
+    setRecipient('');
+  };
   const transfer = async () => {
     if (!wallet.publicKey || !multisigVault) {
       return;
@@ -71,15 +77,19 @@ const SendSol = ({multisigPda}: SendSolProps) => {
 
     const transaction = new VersionedTransaction(message);
 
-    await sendAndConfirm(connection, transaction, wallet, 'Transfer proposed.');
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
-    setAmount('');
-    setRecipient('');
-    closeDialog();
+    setIsLoading(true);
+    try {
+      await sendAndConfirm(connection, transaction, wallet, 'Transfer proposed.');
+      await invalidateMultisig();
+      resetForm();
+      closeDialog();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsOpen(open); }}>
       <DialogTrigger asChild>
         <Button
           disabled={!access}
@@ -109,7 +119,7 @@ const SendSol = ({multisigPda}: SendSolProps) => {
         )}
         <Button
           onClick={() => transfer().catch(() => {})}
-          disabled={!isPublickey(recipient) || !access}
+          disabled={!isPublickey(recipient) || !access || isLoading}
         >
           Transfer
         </Button>

@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import ApproveButton from './ApproveButton';
 import ExecuteButton from './ExecuteButton';
 import RejectButton from './RejectButton';
@@ -8,6 +9,10 @@ import {TransactionObject} from '@/hooks/useServices';
 import {DEFAULT_MULTISIG_PROGRAM_ID, TransactionAccount} from '@sqds/sdk';
 import CancelButton from './CancelButton';
 import {useWallet} from "@solana/wallet-adapter-react";
+import TransactionInstructionDetails from './TransactionInstructionDetails';
+import {cn} from '@/lib/utils';
+
+const TABLE_COLUMN_COUNT = 5;
 
 interface ActionButtonsProps {
   multisigPda: string;
@@ -26,48 +31,95 @@ export default function TransactionTable({
   transactions: TransactionObject[];
   programId?: string;
 }) {
-  const {rpcUrl} = useRpcUrl();
   if (transactions.length === 0) {
     return (
       <TableBody>
         <TableRow>
-          <TableCell colSpan={5}>No transactions found.</TableCell>
+          <TableCell colSpan={TABLE_COLUMN_COUNT}>No transactions found.</TableCell>
         </TableRow>
       </TableBody>
     );
   }
 
-  const getStatusText = (account: TransactionAccount) => {
-    const statusKeys = Object.keys(account.status);
-    const status = statusKeys[0];
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
+  const resolvedProgramId = programId ? programId : DEFAULT_MULTISIG_PROGRAM_ID.toBase58();
 
   return (
     <TableBody>
-      {transactions.map((transaction, index) => {
-        return (
-          <TableRow key={index}>
-            <TableCell>{transaction.account.transactionIndex}</TableCell>
-            <TableCell className="text-blue-500">
-              <Link to={createSolanaExplorerUrl(transaction.address.toBase58(), rpcUrl!)} target="_blank">
-                {transaction.address.toBase58()}
-              </Link>
-            </TableCell>
-            <TableCell>{getStatusText(transaction.account)}</TableCell>
-            <TableCell>
-              <ActionButtons
-                transaction={transaction}
-                multisigPda={multisigPda!}
-                transactionIndex={Number(transaction.account.transactionIndex)}
-                proposalStatus={getStatusText(transaction.account)}
-                programId={programId ? programId : DEFAULT_MULTISIG_PROGRAM_ID.toBase58()}
-              />
-            </TableCell>
-          </TableRow>
-        );
-      })}
+      {transactions.map((transaction) => (
+        <TransactionRowItem
+          key={transaction.address.toBase58()}
+          transaction={transaction}
+          multisigPda={multisigPda}
+          programId={resolvedProgramId}
+        />
+      ))}
     </TableBody>
+  );
+}
+
+function getStatusText(account: TransactionAccount) {
+  const statusKeys = Object.keys(account.status);
+  const status = statusKeys[0];
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function TransactionRowItem({
+                              transaction,
+                              multisigPda,
+                              programId,
+                            }: {
+  transaction: TransactionObject;
+  multisigPda: string;
+  programId: string;
+}) {
+  const {rpcUrl} = useRpcUrl();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const status = getStatusText(transaction.account);
+
+  return (
+    <>
+      <TableRow>
+        <TableCell className="w-8 pr-0">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((v) => !v)}
+            className="flex items-center justify-center rounded p-1 hover:bg-muted transition-colors"
+            aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
+            aria-expanded={isExpanded}
+          >
+            <EyeIcon
+              className={cn(
+                'h-4 w-4 transition-colors',
+                isExpanded ? 'text-foreground' : 'text-muted-foreground'
+              )}
+            />
+          </button>
+        </TableCell>
+        <TableCell>{transaction.account.transactionIndex}</TableCell>
+        <TableCell className="text-blue-500">
+          <Link to={createSolanaExplorerUrl(transaction.address.toBase58(), rpcUrl!)} target="_blank">
+            {transaction.address.toBase58()}
+          </Link>
+        </TableCell>
+        <TableCell>{status}</TableCell>
+        <TableCell>
+          <ActionButtons
+            transaction={transaction}
+            multisigPda={multisigPda}
+            transactionIndex={Number(transaction.account.transactionIndex)}
+            proposalStatus={status}
+            programId={programId}
+          />
+        </TableCell>
+      </TableRow>
+      {isExpanded && (
+        <TableRow>
+          <TableCell colSpan={TABLE_COLUMN_COUNT} className="p-0 bg-muted/20">
+            <TransactionInstructionDetails transaction={transaction} />
+          </TableCell>
+        </TableRow>
+      )}
+    </>
   );
 }
 
@@ -121,6 +173,25 @@ function ActionButtons({
         </>
       )}
     </>
+  );
+}
+
+function EyeIcon({className}: {className?: string}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
   );
 }
 

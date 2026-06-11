@@ -5,11 +5,15 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/compo
 import {clusterApiUrl} from '@solana/web3.js';
 import {useMultisigData} from '@/hooks/useMultisigData';
 import {useMultisig} from '@/hooks/useServices';
+import {ErrorBoundary} from '@/components/ErrorBoundary';
+import {Suspense} from 'react';
 
 const ConfigurationPage = () => {
     const {rpcUrl, multisigAddress, programId} = useMultisigData();
     const {data: multisigConfig} = useMultisig();
     return (
+        <ErrorBoundary>
+        <Suspense fallback={<div>Loading...</div>}>
         <div className="">
             <h1 className="text-3xl font-bold mb-4">Multisig Configuration</h1>
             <Card>
@@ -76,6 +80,8 @@ const ConfigurationPage = () => {
                 </Card>
             </div>
         </div>
+        </Suspense>
+        </ErrorBoundary>
     );
 };
 

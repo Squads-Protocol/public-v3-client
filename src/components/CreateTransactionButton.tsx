@@ -18,12 +18,15 @@ import {importTransaction} from '@/lib/transaction/importTransaction';
 import {useMultisigData} from '@/hooks/useMultisigData';
 import invariant from 'invariant';
 import {useAccess} from "../lib/hooks/useAccess";
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 const CreateTransaction = () => {
   const wallet = useWallet();
+  const invalidateMultisig = useInvalidateMultisig();
 
   const [tx, setTx] = useState('');
   const [open, setOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const {connection, multisigAddress, programId, multisigVault} = useMultisigData();
   const access = useAccess();
@@ -59,7 +62,7 @@ const CreateTransaction = () => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setTx(''); setIsImporting(false); } setOpen(o); }}>
       <DialogTrigger
         className="h-10 px-4 py-2 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded-md">
         Import Transaction
@@ -97,21 +100,27 @@ const CreateTransaction = () => {
           </Button>
           {multisigAddress && (
             <Button
-              disabled={!access}
-              onClick={() =>
+              disabled={!access || isImporting}
+              onClick={() => {
+                setIsImporting(true);
                 toast.promise(
                   importTransaction(tx, connection, multisigAddress, programId.toBase58(), wallet),
                   {
                     id: 'transaction',
                     loading: 'Building transaction...',
-                    success: () => {
+                    success: async () => {
+                      await invalidateMultisig();
                       setOpen(false);
+                      setIsImporting(false);
                       return 'Transaction proposed.';
                     },
-                    error: (e) => `Failed to propose: ${e}`,
+                    error: (e) => {
+                      setIsImporting(false);
+                      return `Failed to propose: ${e}`;
+                    },
                   }
-                )
-              }
+                );
+              }}
             >
               Import
             </Button>

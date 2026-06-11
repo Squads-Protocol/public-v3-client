@@ -21,6 +21,7 @@ import Squads, {getIxPDA, getTxPDA} from '@sqds/sdk';
 import BN from 'bn.js';
 import {useAccess} from "../lib/hooks/useAccess";
 import {signAllAndConfirm} from "../lib/sendAndConfirm";
+import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
 
 type ExecuteButtonProps = {
   multisigPda: string;
@@ -42,9 +43,11 @@ const ExecuteButton = ({
   const access = useAccess();
 
   const isTransactionReady = proposalStatus === 'ExecuteReady';
+  const isDisabled = !isTransactionReady || !access;
 
   const {connection, rpcUrl} = useMultisigData();
   const queryClient = useQueryClient();
+  const invalidateMultisig = useInvalidateMultisig();
 
   const executeTransaction = async () => {
     if (!wallet.publicKey) {
@@ -92,7 +95,6 @@ const ExecuteButton = ({
       transactions.push(
         ...(await Promise.all(
           range(txState.executedIndex + 1, txState.instructionIndex).map(async (ixIndex) => {
-            console.log(ixIndex);
             const [ixPDA] = getIxPDA(txPDA, new BN(ixIndex), new PublicKey(programId));
             const ixExecuteIx = await squads.buildExecuteInstruction(txPDA, ixPDA);
 
@@ -119,13 +121,18 @@ const ExecuteButton = ({
     }
 
     await signAllAndConfirm(connection, transactions, wallet);
-    await queryClient.invalidateQueries({queryKey: ['transactions']});
+    await Promise.all([
+      invalidateMultisig(false),
+      queryClient.invalidateQueries({queryKey: ['balance']}),
+      queryClient.invalidateQueries({queryKey: ['tokenBalances']}),
+    ]);
   };
+
   return (
     <Dialog>
       <DialogTrigger
-        disabled={!isTransactionReady || !access}
-        className={`mr-2 h-10 px-4 py-2 ${!isTransactionReady ? `bg-primary/50` : `bg-primary hover:bg-primary/90 `} text-primary-foreground  rounded-md`}
+        disabled={isDisabled}
+        className={`mr-2 h-10 px-4 py-2 ${isDisabled ? `bg-primary/50 cursor-not-allowed` : `bg-primary hover:bg-primary/90`} text-primary-foreground rounded-md`}
       >
         Execute
       </DialogTrigger>
@@ -145,12 +152,12 @@ const ExecuteButton = ({
 
         <h3>Compute Unit Budget</h3>
         <Input
-          placeholder="Priority Fee"
+          placeholder="Compute Unit Budget"
           onChange={(e) => setComputeUnitBudget(Number(e.target.value))}
           value={computeUnitBudget}
         />
         <Button
-          disabled={!isTransactionReady || !access}
+          disabled={isDisabled}
           onClick={() => executeTransaction().catch(() => {})}
           className="mr-2"
         >
