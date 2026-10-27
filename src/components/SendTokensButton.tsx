@@ -24,6 +24,7 @@ import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionIn
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
+import {parseAmountToBaseUnits} from "../lib/amount";
 
 type SendTokensProps = {
   tokenAccount: string;
@@ -49,12 +50,17 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
   const {connection, multisigVault, rpcUrl, programId} = useMultisigData();
 
   const invalidateMultisig = useInvalidateMultisig();
-  const parsedAmount = parseFloat(amount);
-  const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
+  
+  // PC3-1 Fix: Parse the amount with the mint's decimals using integer arithmetic
+  const parsedTokenAmount = parseAmountToBaseUnits(amount, decimals);
+  const isAmountValid = parsedTokenAmount !== null && parsedTokenAmount > BigInt(0);
 
   const transfer = async () => {
     if (!wallet.publicKey || !multisigVault) {
       return;
+    }
+    if (parsedTokenAmount === null || parsedTokenAmount <= BigInt(0)) {
+      throw new Error('Invalid amount');
     }
     const recipientATA = getAssociatedTokenAddressSync(
       new PublicKey(mint),
@@ -74,7 +80,7 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
       new PublicKey(mint),
       recipientATA,
       new PublicKey(multisigVault),
-      parsedAmount * 10 ** decimals,
+      parsedTokenAmount, // PC3-1 Fix: Use strictly parsed base units (BigInt)
       decimals
     );
 
@@ -138,7 +144,7 @@ const SendTokens = ({tokenAccount, mint, decimals, multisigPda}: SendTokensProps
         )}
         <Button
           onClick={() => transfer().catch(() => {})}
-          disabled={!isPublickey(recipient) || !access || isLoading}
+          disabled={!isPublickey(recipient) || !access || !isAmountValid || isLoading}
         >
           Transfer
         </Button>

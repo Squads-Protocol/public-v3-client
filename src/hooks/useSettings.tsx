@@ -28,6 +28,10 @@ export const useRpcUrl = () => {
     },
     onSuccess: (newRpcUrl) => {
       queryClient.setQueryData(['rpcUrl'], newRpcUrl);
+      // PC3-2 Fix: Dispatch x-rpc-url-changed event so Wallet.tsx syncs its endpoint
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('x-rpc-url-changed'));
+      }
     },
   });
 

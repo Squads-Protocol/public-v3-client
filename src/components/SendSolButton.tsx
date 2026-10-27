@@ -10,7 +10,6 @@ import {Button} from './ui/button';
 import {useState} from 'react';
 import {useWallet} from '@solana/wallet-adapter-react';
 import {
-  LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
   TransactionMessage,
@@ -25,6 +24,7 @@ import {createSquadTransactionInstructions} from '@/lib/createSquadTransactionIn
 import {useAccess} from "../lib/hooks/useAccess";
 import {sendAndConfirm} from "../lib/sendAndConfirm";
 import {useInvalidateMultisig} from "../lib/hooks/useInvalidateMultisig";
+import {parseAmountToBaseUnits} from "../lib/amount";
 
 type SendSolProps = {
   multisigPda: string;
@@ -37,8 +37,11 @@ const SendSol = ({multisigPda}: SendSolProps) => {
   const [recipient, setRecipient] = useState('');
   const {connection, multisigVault, rpcUrl, programId} = useMultisigData();
   const invalidateMultisig = useInvalidateMultisig();
-  const parsedAmount = parseFloat(amount);
-  const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
+  
+  // PC3-1 Fix: SOL has 9 decimals; parse exactly instead of going through a float.
+  const parsedLamports = parseAmountToBaseUnits(amount, 9);
+  const isAmountValid = parsedLamports !== null && parsedLamports > BigInt(0);
+  
   const access = useAccess();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,15 +51,19 @@ const SendSol = ({multisigPda}: SendSolProps) => {
     setAmount('');
     setRecipient('');
   };
+  
   const transfer = async () => {
     if (!wallet.publicKey || !multisigVault) {
       return;
+    }
+    if (parsedLamports === null || parsedLamports <= BigInt(0)) {
+      throw new Error('Invalid amount');
     }
 
     const transferInstruction = SystemProgram.transfer({
       fromPubkey: multisigVault,
       toPubkey: new PublicKey(recipient),
-      lamports: parsedAmount * LAMPORTS_PER_SOL,
+      lamports: parsedLamports, // PC3-1 Fix: Use the exact BigInt base units
     });
 
     const instructions = await createSquadTransactionInstructions({
@@ -119,7 +126,7 @@ const SendSol = ({multisigPda}: SendSolProps) => {
         )}
         <Button
           onClick={() => transfer().catch(() => {})}
-          disabled={!isPublickey(recipient) || !access || isLoading}
+          disabled={!isPublickey(recipient) || !access || !isAmountValid || isLoading}
         >
           Transfer
         </Button>
